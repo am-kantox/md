@@ -11,7 +11,7 @@ defmodule Md.Parser do
     braces: [
       {"*", %{tag: :b}},
       {"_", %{tag: :it}},
-      {"**", %{tag: :strong}},
+      {"**", %{tag: :strong, attributes: %{class: "red"}}},
       {"__", %{tag: :em}},
       {"~", %{tag: :s}},
       {"~~", %{tag: :del}}
@@ -81,6 +81,7 @@ defmodule Md.Parser do
 
   Enum.each(@syntax[:braces], fn {md, properties} ->
     tag = properties[:tag]
+    attrs = Macro.escape(properties[:attributes])
 
     defp do_parse(
            <<unquote(md), rest::binary>>,
@@ -94,7 +95,12 @@ defmodule Md.Parser do
 
     defp do_parse(<<unquote(md), rest::binary>>, state(), format) when format != :raw do
       Logger.debug("Opening #{unquote(md)}. State: " <> inspect(state))
-      do_parse(rest, %State{state | path: [{unquote(tag), %{}, [""]} | state.path]}, :md)
+
+      do_parse(
+        rest,
+        %State{state | path: [{unquote(tag), unquote(attrs), [""]} | state.path]},
+        :md
+      )
     end
   end)
 
