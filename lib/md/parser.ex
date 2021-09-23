@@ -41,25 +41,42 @@ defmodule Md.Parser do
 
   def syntax, do: @syntax
 
-  def parse(input), do: do_parse(input, %State{})
+  @spec parse(binary()) :: State.t()
+  def parse(input), do: do_parse(input, %State{}, :linefeed)
 
-  def generate(input), do: input |> parse() |> XmlBuilder.generate()
+  # TODO analyze errors
+  @spec generate(binary()) :: binary()
+  def generate(input) do
+    with %State{ast: ast} <- parse(input), do: XmlBuilder.generate(ast)
+  end
 
-  defmacrop empty, do: quote(do: %State{path: []} = var!(state))
+  # defmacrop empty, do: quote(do: %State{path: []} = var!(state))
   defmacrop state, do: quote(do: %State{} = var!(state))
 
-  defp do_parse(input, state, format \\ true)
+  @type parse_format :: :md | :raw | :linefeed
+  @spec do_parse(binary(), State.t(), parse_format()) :: State.t()
+  defp do_parse(input, state, format)
 
-  ## redundant spaces
-  defp do_parse(<<?\s, rest::binary>>, empty(), _) do
-    Logger.debug("Skipping whitespace with empty state")
-    do_parse(rest, state)
+  ## spaces
+  defp do_parse(<<?\s, rest::binary>>, state(), :linefeed) do
+    Logger.debug("Skipping whitespace. State: " <> inspect(state))
+    do_parse(rest, state, :linefeed)
+  end
+
+  defp do_parse(<<?\n, rest::binary>>, state(), :linefeed) do
+    Logger.debug("Skipping whitespace. State: " <> inspect(state))
+    do_parse(rest, rewind_state(state), :linefeed)
+  end
+
+  defp do_parse(<<?\n, rest::binary>>, state(), :md) do
+    Logger.debug("Linefeed. State: " <> inspect(state))
+    do_parse(rest, push_char(?\s, state), :linefeed)
   end
 
   ## escaped symbol
-  defp do_parse(<<?\\, x::utf8, rest::binary>>, state(), true) do
+  defp do_parse(<<?\\, x::utf8, rest::binary>>, state(), format) when format != :raw do
     Logger.debug("Escaped entity ‹#{<<x::utf8>>}›")
-    do_parse(<<x::utf8, rest::binary>>, state, false)
+    do_parse(<<x::utf8, rest::binary>>, state, :raw)
   end
 
   Enum.each(@syntax[:braces], fn {md, properties} ->
@@ -68,15 +85,16 @@ defmodule Md.Parser do
     defp do_parse(
            <<unquote(md), rest::binary>>,
            %State{path: [{unquote(tag), _, _} | _]} = state,
-           true
-         ) do
+           format
+         )
+         when format != :raw do
       Logger.debug("Closing #{unquote(md)}. State: " <> inspect(state))
-      do_parse(rest, to_ast(state), true)
+      do_parse(rest, to_ast(state), :md)
     end
 
-    defp do_parse(<<unquote(md), rest::binary>>, state(), true) do
+    defp do_parse(<<unquote(md), rest::binary>>, state(), format) when format != :raw do
       Logger.debug("Opening #{unquote(md)}. State: " <> inspect(state))
-      do_parse(rest, %State{state | path: [{unquote(tag), %{}, [""]} | state.path]}, true)
+      do_parse(rest, %State{state | path: [{unquote(tag), %{}, [""]} | state.path]}, :md)
     end
   end)
 
@@ -84,7 +102,21 @@ defmodule Md.Parser do
 
   defp do_parse(<<x::utf8, rest::binary>>, state(), _format) do
     Logger.debug("Pushing #{<<x::utf8>>}. State: " <> inspect(state))
+    do_parse(rest, push_char(x, state), :md)
+  end
 
+  defp do_parse("", state(), _) do
+    Logger.debug("Finalizing. State: " <> inspect(state))
+    rewind_state(state)
+  end
+
+  ## helpers
+  @spec rewind_state(State.t()) :: State.t()
+  defp rewind_state(state),
+    do: Enum.reduce(state.path, state, fn _, acc -> to_ast(acc) end)
+
+  @spec push_char(pos_integer(), State.t()) :: State.t()
+  defp push_char(x, state) do
     path =
       case state.path do
         [] ->
@@ -97,16 +129,10 @@ defmodule Md.Parser do
           [{elem, attrs, [<<x::utf8>> | branch]} | rest]
       end
 
-    do_parse(rest, %State{state | path: path}, true)
+    %State{state | path: path}
   end
 
-  defp do_parse("", state(), _) do
-    Logger.debug("Finalizing. State: " <> inspect(state))
-
-    Enum.reduce(state.path, state, fn _, acc -> to_ast(acc) end)
-  end
-
-  ## helpers
+  @spec to_ast(State.t()) :: State.t()
   defp to_ast(%State{path: [], ast: _} = state), do: state
 
   defp to_ast(%State{path: [last], ast: ast} = state),
@@ -115,6 +141,7 @@ defmodule Md.Parser do
   defp to_ast(%State{path: [last, {elem, attrs, branch} | rest]} = state),
     do: %State{state | path: [{elem, attrs, [reverse(last) | branch]} | rest]}
 
+  @spec reverse(State.trace()) :: State.trace()
   defp reverse({elem, attrs, branch}) when is_list(branch),
     do: {elem, attrs, Enum.reverse(branch)}
 
