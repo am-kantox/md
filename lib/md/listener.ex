@@ -8,7 +8,6 @@ defmodule Md.Listener do
           :break
           | :linefeed
           | :whitespace
-          | :until_eol
           | :end
           | {:tag, binary(), nil | true | false}
           | {:esc, binary()}

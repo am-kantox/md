@@ -13,7 +13,10 @@ defmodule Md.Parser do
       {"###", %{tag: :h3}},
       {"####", %{tag: :h4}},
       {"#####", %{tag: :h5}},
-      {"######", %{tag: :h6}}
+      {"######", %{tag: :h6}},
+      # nested
+      {">", %{tag: :blockquote}},
+      {">>", %{tag: :blockquote, attributes: %{nested: 1}}}
     ],
     brace: [
       {"*", %{tag: :b}},
@@ -125,6 +128,16 @@ defmodule Md.Parser do
     tag = properties[:tag]
     attrs = Macro.escape(properties[:attributes])
 
+    defp do_parse(
+           <<unquote(md), rest::binary>>,
+           %State{path: [{unquote(tag), unquote(attrs), _} | _]} = state,
+           mode
+         )
+         when mode == :linefeed do
+      state = listener({:tag, unquote(md), false}, state)
+      do_parse(rest, state, :md)
+    end
+
     defp do_parse(<<unquote(md), rest::binary>>, state(), mode) when mode == :linefeed do
       state = listener({:tag, unquote(md), true}, state)
 
@@ -191,8 +204,11 @@ defmodule Md.Parser do
   defp push_char(x, state, mode) do
     path =
       case {mode, state.path} do
-        {:linefeed, path} ->
-          [{syntax()[:outer], [], [<<x::utf8>>]} | path]
+        {:linefeed, []} ->
+          [{syntax()[:outer], nil, [<<x::utf8>>]}]
+
+        # {:linefeed, path} ->
+        #   [{syntax()[:outer], nil, [<<x::utf8>>]} | path]
 
         {_, [{elem, attrs, [txt | branch]} | rest]} when is_binary(txt) ->
           [{elem, attrs, [txt <> <<x::utf8>> | branch]} | rest]
