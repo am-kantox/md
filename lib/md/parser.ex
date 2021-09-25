@@ -15,8 +15,7 @@ defmodule Md.Parser do
       {"#####", %{tag: :h5}},
       {"######", %{tag: :h6}},
       # nested
-      {">", %{tag: :blockquote}},
-      {">>", %{tag: :blockquote, attributes: %{nested: 1}}}
+      {">", %{tag: :blockquote}}
     ],
     brace: [
       {"*", %{tag: :b}},
@@ -130,12 +129,23 @@ defmodule Md.Parser do
 
     defp do_parse(
            <<unquote(md), rest::binary>>,
-           %State{path: [{unquote(tag), unquote(attrs), _} | _]} = state,
+           %State{path: [{unquote(tag), _, _} | _]} = state,
            mode
          )
-         when mode == :linefeed do
-      state = listener({:tag, unquote(md), false}, state)
-      do_parse(rest, state, :md)
+         when mode != :raw do
+      case mode do
+        :linefeed ->
+          do_parse(rest, state, :md)
+
+        :md ->
+          state = listener({:tag, unquote(md), true}, state)
+
+          do_parse(
+            rest,
+            %State{state | path: [{unquote(tag), unquote(attrs), [""]} | state.path]},
+            :md
+          )
+      end
     end
 
     defp do_parse(<<unquote(md), rest::binary>>, state(), mode) when mode == :linefeed do
@@ -177,7 +187,7 @@ defmodule Md.Parser do
   ## plain text handlers
 
   defp do_parse(<<x::utf8, rest::binary>>, state(), mode) do
-    state = listener({:tag, <<x::utf8>>, true}, state)
+    state = listener({:char, <<x::utf8>>}, state)
     do_parse(rest, push_char(x, state, mode), :md)
   end
 

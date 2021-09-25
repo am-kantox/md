@@ -25,7 +25,7 @@ defmodule MdTest do
                   " 42 "
                 ]},
                {:blockquote, nil, [" Hi, there  olala "]},
-               {:blockquote, nil, [" Hi, there ", {:blockquote, %{nested: 1}, [" olala "]}]}
+               {:blockquote, nil, [" Hi, there ", {:blockquote, nil, [" olala "]}]}
              ],
              listener: Md.Parser.DebugListener
            }
