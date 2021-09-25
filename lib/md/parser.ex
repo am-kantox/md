@@ -7,7 +7,15 @@ defmodule Md.Parser do
     magnet: [
       {"¡", %{tag: :abbr}}
     ],
-    braces: [
+    paragraph: [
+      {"#", %{tag: :h1}},
+      {"##", %{tag: :h2}},
+      {"###", %{tag: :h3}},
+      {"####", %{tag: :h4}},
+      {"#####", %{tag: :h5}},
+      {"######", %{tag: :h6}}
+    ],
+    brace: [
       {"*", %{tag: :b}},
       {"_", %{tag: :it}},
       {"**", %{tag: :strong, attributes: %{class: "red"}}},
@@ -113,7 +121,22 @@ defmodule Md.Parser do
     do_parse(<<x::utf8, rest::binary>>, state, :raw)
   end
 
-  Enum.each(@syntax[:braces], fn {md, properties} ->
+  Enum.each(@syntax[:paragraph], fn {md, properties} ->
+    tag = properties[:tag]
+    attrs = Macro.escape(properties[:attributes])
+
+    defp do_parse(<<unquote(md), rest::binary>>, state(), mode) when mode == :linefeed do
+      state = listener({:tag, unquote(md), true}, state)
+
+      do_parse(
+        rest,
+        %State{state | path: [{unquote(tag), unquote(attrs), [""]} | state.path]},
+        :md
+      )
+    end
+  end)
+
+  Enum.each(@syntax[:brace], fn {md, properties} ->
     tag = properties[:tag]
     attrs = Macro.escape(properties[:attributes])
 
