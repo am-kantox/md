@@ -5,11 +5,11 @@ defmodule MdTest do
   test "leading spaces" do
     assert Md.parse(" he\\*llo \n  *foo **bar baz \n   \n Answer: _42_.") == %Md.Parser.State{
              ast: [
-               {:p, [], ["Answer: ", {:it, nil, ["42"]}, "."]},
                {:p, [],
-                ["he*llo  ", {:b, nil, ["foo ", {:strong, %{class: "red"}, ["bar baz  "]}]}]}
+                ["he*llo  ", {:b, nil, ["foo ", {:strong, %{class: "red"}, ["bar baz  "]}]}]},
+               {:p, [], ["Answer: ", {:it, nil, ["42"]}, "."]}
              ],
-             path: []
+             listener: Md.Parser.DebugListener
            }
   end
 end
