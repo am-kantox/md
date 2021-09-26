@@ -209,11 +209,11 @@ defmodule Md.Parser do
         {:nested, tag, level} ->
           current_level = level(state, tag)
 
-          Enum.reduce(level..(current_level - 1)//1, state, fn _, state ->
-            state
-            |> rewind_state(tag)
-            |> to_ast()
-          end)
+          # Backward compatible version of
+          # Enum.reduce(level..(current_level - 1)//1, state, fn _, state ->
+          for i <- level..current_level, i > level, reduce: state do
+            acc -> acc |> rewind_state(tag) |> to_ast()
+          end
 
         _ ->
           state
