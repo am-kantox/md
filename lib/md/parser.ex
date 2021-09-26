@@ -77,10 +77,10 @@ defmodule Md.Parser do
   def generate(%State{ast: ast}, options),
     do: XmlBuilder.generate(ast, options)
 
-  # defmacrop empty, do: quote(do: %State{path: []} = var!(state))
+  defmacrop empty, do: quote(do: %State{path: []} = var!(state))
   defmacrop state, do: quote(do: %State{} = var!(state))
 
-  @type parse_mode :: :md | :raw | :linefeed
+  @type parse_mode :: :md | :raw | :linefeed | {:nested, L.element(), non_neg_integer()}
   @spec do_parse(binary(), L.state(), parse_mode()) :: L.state()
   defp do_parse(input, state, mode)
 
@@ -94,6 +94,11 @@ defmodule Md.Parser do
   defp do_parse(<<?\s, rest::binary>>, state(), :linefeed) do
     state = listener(:whitespace, state)
     do_parse(rest, state, :linefeed)
+  end
+
+  defp do_parse(<<?\s, rest::binary>>, state(), {:nested, _, _} = nested) do
+    state = listener(:whitespace, state)
+    do_parse(rest, state, nested)
   end
 
   defp do_parse(<<?\n, rest::binary>>, state(), :linefeed) do
@@ -127,35 +132,45 @@ defmodule Md.Parser do
     tag = properties[:tag]
     attrs = Macro.escape(properties[:attributes])
 
+    defp do_parse(<<unquote(md), rest::binary>>, empty(), _) do
+      state = listener({:tag, unquote(md), true}, state)
+
+      do_parse(
+        rest,
+        %State{state | path: [{unquote(tag), unquote(attrs), [""]}]},
+        {:nested, unquote(tag), 1}
+      )
+    end
+
     defp do_parse(
            <<unquote(md), rest::binary>>,
            %State{path: [{unquote(tag), _, _} | _]} = state,
            mode
          )
          when mode != :raw do
+      current_level = level(state, unquote(tag))
+
       case mode do
         :linefeed ->
-          do_parse(rest, state, :md)
+          do_parse(rest, state, {:nested, unquote(tag), 1})
 
-        :md ->
+        {:nested, unquote(tag), level} when level < current_level ->
+          do_parse(rest, state, {:nested, unquote(tag), level + 1})
+
+        {:nested, unquote(tag), level} ->
           state = listener({:tag, unquote(md), true}, state)
 
           do_parse(
             rest,
             %State{state | path: [{unquote(tag), unquote(attrs), [""]} | state.path]},
-            :md
+            {:nested, unquote(tag), level + 1}
           )
       end
     end
 
-    defp do_parse(<<unquote(md), rest::binary>>, state(), mode) when mode == :linefeed do
-      state = listener({:tag, unquote(md), true}, state)
-
-      do_parse(
-        rest,
-        %State{state | path: [{unquote(tag), unquote(attrs), [""]} | state.path]},
-        :md
-      )
+    defp do_parse(<<unquote(md), _::binary>> = input, state(), :linefeed) do
+      state = rewind_state(state, unquote(tag))
+      do_parse(input, state, :linefeed)
     end
   end)
 
@@ -188,6 +203,22 @@ defmodule Md.Parser do
 
   defp do_parse(<<x::utf8, rest::binary>>, state(), mode) do
     state = listener({:char, <<x::utf8>>}, state)
+
+    state =
+      case mode do
+        {:nested, tag, level} ->
+          current_level = level(state, tag)
+
+          Enum.reduce(level..(current_level - 1)//1, state, fn _, state ->
+            state
+            |> rewind_state(tag)
+            |> to_ast()
+          end)
+
+        _ ->
+          state
+      end
+
     do_parse(rest, push_char(x, state, mode), :md)
   end
 
@@ -205,9 +236,16 @@ defmodule Md.Parser do
     end
   end
 
-  @spec rewind_state(L.state()) :: L.state()
-  defp rewind_state(state) do
-    Enum.reduce(state.path, state, fn _, acc -> to_ast(acc) end)
+  @spec level(L.state(), L.element()) :: non_neg_integer()
+  defp level(state(), tag),
+    do: Enum.count(state.path, &match?({^tag, _, _}, &1))
+
+  @spec rewind_state(L.state(), L.element()) :: L.state()
+  defp rewind_state(state, stop_at \\ nil) do
+    Enum.reduce_while(state.path, state, fn
+      {^stop_at, _, _}, acc -> {:halt, acc}
+      _, acc -> {:cont, to_ast(acc)}
+    end)
   end
 
   @spec push_char(pos_integer(), L.state(), parse_mode()) :: L.state()

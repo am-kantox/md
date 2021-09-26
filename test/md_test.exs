@@ -16,16 +16,17 @@ defmodule MdTest do
   test "simple markdown" do
     assert "priv/SIMPLE.md" |> File.read!() |> Md.parse() == %Md.Parser.State{
              ast: [
-               {:h1, nil, [" Header 1 "]},
-               {:h2, nil, [" Header 2 "]},
+               {:h1, nil, ["Header 1 "]},
+               {:h2, nil, ["Header 2 "]},
                {:p, nil,
                 [
                   "he*llo  ",
                   {:b, nil, ["foo ", {:strong, %{class: "red"}, ["bar"]}, " baz"]},
                   " 42 "
                 ]},
-               {:blockquote, nil, [" Hi, there  olala "]},
-               {:blockquote, nil, [" Hi, there ", {:blockquote, nil, [" olala "]}]}
+               {:blockquote, nil, ["Hi, ", {:b, nil, ["there "]}, "olala "]},
+               {:blockquote, nil,
+                ["Hi, there ", {:blockquote, nil, ["2nd 1st line 2nd 2nd line "]}, "boom"]}
              ],
              listener: Md.Parser.DebugListener
            }

@@ -4,20 +4,21 @@ defmodule Md.Listener do
   when the elements are encountered and processed.
   """
 
-  @type context ::
-          :break
-          | :linefeed
-          | :whitespace
-          | :end
-          | {:tag, binary(), nil | true | false}
-          | {:esc, binary()}
-          | {:char, binary()}
-
   @type element :: atom()
   @type attributes :: nil | %{required(element()) => any()}
   @type leaf :: binary()
   @type branch :: {element(), attributes(), [leaf() | branch()]}
   @type trace :: branch()
+
+  @type context ::
+          :break
+          | :linefeed
+          | {:nested, element(), non_neg_integer()}
+          | :whitespace
+          | :end
+          | {:tag, binary(), nil | true | false}
+          | {:esc, binary()}
+          | {:char, binary()}
 
   @type state :: %{
           __struct__: Md.Parser.State,
