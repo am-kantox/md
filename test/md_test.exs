@@ -9,7 +9,7 @@ defmodule MdTest do
                 ["he*llo  ", {:b, nil, ["foo ", {:strong, %{class: "red"}, ["bar baz  "]}]}]},
                {:p, nil, ["Answer: ", {:it, nil, ["42"]}, "."]}
              ],
-             listener: Md.Parser.DebugListener
+             listener: Md.Listener.Debug
            }
   end
 
@@ -28,7 +28,7 @@ defmodule MdTest do
                {:blockquote, nil,
                 ["Hi, there ", {:blockquote, nil, ["2nd 1st line 2nd 2nd line "]}, "boom"]}
              ],
-             listener: Md.Parser.DebugListener
+             listener: Md.Listener.Debug
            }
   end
 end
