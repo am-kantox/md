@@ -36,7 +36,7 @@ defmodule Md.Parser do
     @moduledoc """
     The internal state of the parser.
     """
-    defstruct path: [], ast: [], listener: nil, bag: [], indent: 0
+    defstruct path: [], ast: [], listener: nil, bag: [], indent: []
   end
 
   @syntax :md
@@ -107,6 +107,7 @@ defmodule Md.Parser do
 
   defp do_parse(<<?\n, rest::binary>>, state(), {:linefeed, _}) do
     state = listener(:break, state)
+    state = %State{state | indent: []}
     do_parse(rest, rewind_state(state), {:linefeed, 0})
   end
 
@@ -195,7 +196,7 @@ defmodule Md.Parser do
         %State{
           state
           | path: [{unquote(tag), unquote(attrs), []}, {unquote(outer), unquote(attrs), []}],
-            indent: pos
+            indent: [pos]
         },
         {:inner, unquote(tag), pos}
       )
@@ -203,7 +204,7 @@ defmodule Md.Parser do
 
     defp do_parse(
            <<unquote(md), rest::binary>> = input,
-           %State{path: [{unquote(tag), _, _} | _], indent: indent} = state,
+           %State{path: [{unquote(tag), _, _} | _], indent: [indent | _] = indents} = state,
            mode
          )
          when mode != :raw do
@@ -211,19 +212,17 @@ defmodule Md.Parser do
         {:linefeed, pos} ->
           do_parse(input, state, {:inner, unquote(tag), pos})
 
-        {:inner, unquote(tag), pos} when pos == indent ->
-          state = listener({:tag, {unquote(md), unquote(tag)}, false}, state)
+        {:inner, unquote(tag), ^indent} ->
           state = rewind_state(state, unquote(outer))
           state = listener({:tag, {unquote(md), unquote(tag)}, true}, state)
 
           do_parse(
             rest,
             %State{state | path: [{unquote(tag), unquote(attrs), []} | state.path]},
-            {:inner, unquote(tag), pos}
+            {:inner, unquote(tag), indent}
           )
 
         {:inner, unquote(tag), pos} when pos > indent ->
-          state = listener({:tag, {unquote(md), unquote(tag)}, false}, state)
           state = rewind_state(state, unquote(outer))
           state = listener({:tag, {unquote(md), unquote(tag)}, true}, state)
           state = listener({:tag, {unquote(md), unquote(outer)}, true}, state)
@@ -238,16 +237,20 @@ defmodule Md.Parser do
                   {unquote(outer), unquote(attrs), []},
                   {unquote(tag), unquote(attrs), []} | state.path
                 ],
-                indent: pos
+                indent: [pos | indents]
             },
             {:inner, unquote(tag), pos}
           )
 
         {:inner, unquote(tag), pos} when pos < indent ->
-          state = listener({:tag, {unquote(md), unquote(tag)}, false}, state)
-          state = rewind_state(state, unquote(outer))
-          state = listener({:tag, {unquote(md), unquote(outer)}, false}, state)
-          state = to_ast(state)
+          {skipped, indents} = Enum.split_with(indents, &(&1 > pos))
+
+          state =
+            Enum.reduce(skipped, state, fn _, state ->
+              state = rewind_state(state, unquote(outer))
+              to_ast(state)
+            end)
+
           state = rewind_state(state, unquote(outer))
           state = listener({:tag, {unquote(md), unquote(tag)}, true}, state)
 
@@ -256,7 +259,7 @@ defmodule Md.Parser do
             %State{
               state
               | path: [{unquote(tag), unquote(attrs), []} | state.path],
-                indent: pos
+                indent: indents
             },
             {:inner, unquote(tag), pos}
           )
@@ -279,7 +282,6 @@ defmodule Md.Parser do
            mode
          )
          when mode != :raw do
-      state = listener({:tag, {unquote(md), unquote(tag)}, false}, state)
       do_parse(rest, to_ast(state), :md)
     end
 
@@ -322,6 +324,8 @@ defmodule Md.Parser do
       :finalize
       |> listener(state)
       |> rewind_state()
+
+    state = %State{state | indent: []}
 
     listener(:end, state)
   end
@@ -371,13 +375,17 @@ defmodule Md.Parser do
   end
 
   @spec to_ast(L.state()) :: L.state()
-  defp to_ast(%State{path: [], ast: _} = state), do: state
+  defp to_ast(%State{path: []} = state), do: state
 
-  defp to_ast(%State{path: [last], ast: ast} = state),
-    do: %State{state | path: [], ast: [reverse(last) | ast]}
+  defp to_ast(%State{path: [{tag, _, _} = last], ast: ast} = state) do
+    state = %State{state | path: [], ast: [reverse(last) | ast]}
+    listener({:tag, tag, false}, state)
+  end
 
-  defp to_ast(%State{path: [last, {elem, attrs, branch} | rest]} = state),
-    do: %State{state | path: [{elem, attrs, [reverse(last) | branch]} | rest]}
+  defp to_ast(%State{path: [{tag, _, _} = last, {elem, attrs, branch} | rest]} = state) do
+    state = %State{state | path: [{elem, attrs, [reverse(last) | branch]} | rest]}
+    listener({:tag, tag, false}, state)
+  end
 
   @spec reverse(L.trace()) :: L.trace()
   defp reverse({elem, attrs, branch}) when is_list(branch),

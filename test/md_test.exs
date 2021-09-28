@@ -27,13 +27,26 @@ defmodule MdTest do
                {:blockquote, nil, ["Hi, ", {:b, nil, ["there "]}, "olala "]},
                {:blockquote, nil,
                 ["Hi, there ", {:blockquote, nil, ["2nd 1st line 2nd 2nd line "]}, "boom "]},
-               {:ul, nil,
-                [
-                  {:li, nil, [" foo "]},
-                  {:li, nil, [" bar "]},
-                  {:li, nil, [{:ul, nil, [{:li, nil, [" baz "]}, {:li, nil, [" bzz "]}]}]},
-                  {:li, nil, [" zzz "]}
-                ]}
+               {
+                 :ul,
+                 nil,
+                 [
+                   {:li, nil, [" 1 | foo "]},
+                   {:li, nil, [" 1 | bar "]},
+                   {:li, nil,
+                    [
+                      {:ul, nil,
+                       [
+                         {:li, nil, [" 2 | baz "]},
+                         {:li, nil, [" 2 | bzz "]},
+                         {:li, nil, [{:ul, nil, [{:li, nil, [" 3 | rgf "]}]}]}
+                       ]}
+                    ]},
+                   {:li, nil, [" 1 | zzz "]}
+                 ]
+               },
+               {:p, nil, ["Hi "]},
+               {:ul, nil, [{:li, nil, [" 1 | item 1  "]}, {:li, nil, [" 1 | item 2 "]}]}
              ],
              listener: Md.Listener.Debug
            }

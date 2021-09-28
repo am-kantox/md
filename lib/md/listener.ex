@@ -27,7 +27,7 @@ defmodule Md.Listener do
           ast: [branch()],
           listener: module(),
           bag: list(),
-          indent: non_neg_integer()
+          indent: [non_neg_integer()]
         }
 
   @callback element(context(), state()) :: :ok | {:update, state()}
