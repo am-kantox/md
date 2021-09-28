@@ -17,7 +17,7 @@ defmodule Md.Listener do
           | :whitespace
           | :finalize
           | :end
-          | {:tag, binary(), nil | true | false}
+          | {:tag, {binary(), element()}, nil | true | false}
           | {:esc, binary()}
           | {:char, binary()}
 
@@ -82,5 +82,6 @@ defmodule Md.Listener do
 end
 
 defmodule Md.Listener.Debug do
+  @moduledoc false
   use Md.Listener
 end
