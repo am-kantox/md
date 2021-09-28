@@ -36,7 +36,7 @@ defmodule Md.Parser do
     @moduledoc """
     The internal state of the parser.
     """
-    defstruct path: [], ast: [], listener: nil, bag: []
+    defstruct path: [], ast: [], listener: nil, bag: [], indent: 0
   end
 
   @syntax :md
@@ -72,26 +72,32 @@ defmodule Md.Parser do
   defmacrop empty, do: quote(do: %State{path: []} = var!(state))
   defmacrop state, do: quote(do: %State{} = var!(state))
 
-  @type parse_mode :: :none | :md | :raw | :linefeed | {:nested, L.element(), non_neg_integer()}
+  @type parse_mode ::
+          :none
+          | :md
+          | :raw
+          | {:linefeed, non_neg_integer()}
+          | {:nested, L.element(), non_neg_integer()}
+          | {:inner, L.element(), non_neg_integer()}
   @spec do_parse(binary(), L.state(), parse_mode()) :: L.state()
   defp do_parse(input, state, mode)
 
   # :start
   defp do_parse(input, initial(), :none) do
     state = listener(:start, state)
-    do_parse(input, state, :linefeed)
+    do_parse(input, state, {:linefeed, 0})
   end
 
   # → :linefeed
   defp do_parse(<<?\n, rest::binary>>, state(), :md) do
     state = listener(:linefeed, state)
-    do_parse(rest, push_char(?\s, state, :md), :linefeed)
+    do_parse(rest, push_char(?\s, state, :md), {:linefeed, 0})
   end
 
   ## linefeed mode
-  defp do_parse(<<?\s, rest::binary>>, state(), :linefeed) do
+  defp do_parse(<<?\s, rest::binary>>, state(), {:linefeed, pos}) do
     state = listener(:whitespace, state)
-    do_parse(rest, state, :linefeed)
+    do_parse(rest, state, {:linefeed, pos + 1})
   end
 
   defp do_parse(<<?\s, rest::binary>>, state(), {:nested, _, _} = nested) do
@@ -99,23 +105,23 @@ defmodule Md.Parser do
     do_parse(rest, state, nested)
   end
 
-  defp do_parse(<<?\n, rest::binary>>, state(), :linefeed) do
+  defp do_parse(<<?\n, rest::binary>>, state(), {:linefeed, _}) do
     state = listener(:break, state)
-    do_parse(rest, rewind_state(state), :linefeed)
+    do_parse(rest, rewind_state(state), {:linefeed, 0})
   end
 
   Enum.each(@syntax[:flush], fn {md, properties} ->
     tag = properties[:tag]
     attrs = Macro.escape(properties[:attributes])
 
-    defp do_parse(<<unquote(md), rest::binary>>, state(), :linefeed) do
+    defp do_parse(<<unquote(md), rest::binary>>, state(), {:linefeed, _}) do
       state = listener({:tag, {unquote(md), unquote(tag)}, nil}, state)
       state = rewind_state(state)
 
       do_parse(
         rest,
         %State{state | path: [{unquote(tag), unquote(attrs), []} | state.path]},
-        :linefeed
+        {:linefeed, 0}
       )
     end
   end)
@@ -135,7 +141,7 @@ defmodule Md.Parser do
 
       do_parse(
         rest,
-        %State{state | path: [{unquote(tag), unquote(attrs), [""]}]},
+        %State{state | path: [{unquote(tag), unquote(attrs), []}]},
         {:nested, unquote(tag), 1}
       )
     end
@@ -149,7 +155,7 @@ defmodule Md.Parser do
       current_level = level(state, unquote(tag))
 
       case mode do
-        :linefeed ->
+        {:linefeed, _} ->
           do_parse(rest, state, {:nested, unquote(tag), 1})
 
         :md ->
@@ -163,15 +169,15 @@ defmodule Md.Parser do
 
           do_parse(
             rest,
-            %State{state | path: [{unquote(tag), unquote(attrs), [""]} | state.path]},
+            %State{state | path: [{unquote(tag), unquote(attrs), []} | state.path]},
             {:nested, unquote(tag), level + 1}
           )
       end
     end
 
-    defp do_parse(<<unquote(md), _::binary>> = input, state(), :linefeed) do
+    defp do_parse(<<unquote(md), _::binary>> = input, state(), {:linefeed, pos}) do
       state = rewind_state(state, unquote(tag))
-      do_parse(input, state, :linefeed)
+      do_parse(input, state, {:linefeed, pos})
     end
   end)
 
@@ -180,46 +186,86 @@ defmodule Md.Parser do
     outer = Map.get(properties, :outer, :ul)
     attrs = Macro.escape(properties[:attributes])
 
-    defp do_parse(<<unquote(md), rest::binary>>, empty(), _) do
+    defp do_parse(<<unquote(md), rest::binary>>, empty(), {:linefeed, pos}) do
       state = listener({:tag, {unquote(md), unquote(outer)}, true}, state)
       state = listener({:tag, {unquote(md), unquote(tag)}, true}, state)
 
       do_parse(
         rest,
-        %State{state | path: [{unquote(tag), unquote(attrs), [""]}]},
-        {:nested, unquote(tag), 1}
+        %State{
+          state
+          | path: [{unquote(tag), unquote(attrs), []}, {unquote(outer), unquote(attrs), []}],
+            indent: pos
+        },
+        {:inner, unquote(tag), pos}
       )
     end
 
     defp do_parse(
-           <<unquote(md), rest::binary>>,
-           %State{path: [{unquote(tag), _, _} | _]} = state,
+           <<unquote(md), rest::binary>> = input,
+           %State{path: [{unquote(tag), _, _} | _], indent: indent} = state,
            mode
          )
          when mode != :raw do
-      current_level = level(state, unquote(tag))
-
       case mode do
-        :linefeed ->
-          do_parse(rest, state, {:nested, unquote(tag), 1})
+        {:linefeed, pos} ->
+          do_parse(input, state, {:inner, unquote(tag), pos})
 
-        {:nested, unquote(tag), level} when level < current_level ->
-          do_parse(rest, state, {:nested, unquote(tag), level + 1})
-
-        {:nested, unquote(tag), level} ->
+        {:inner, unquote(tag), pos} when pos == indent ->
+          state = listener({:tag, {unquote(md), unquote(tag)}, false}, state)
+          state = rewind_state(state, unquote(outer))
           state = listener({:tag, {unquote(md), unquote(tag)}, true}, state)
 
           do_parse(
             rest,
-            %State{state | path: [{unquote(tag), unquote(attrs), [""]} | state.path]},
-            {:nested, unquote(tag), level + 1}
+            %State{state | path: [{unquote(tag), unquote(attrs), []} | state.path]},
+            {:inner, unquote(tag), pos}
+          )
+
+        {:inner, unquote(tag), pos} when pos > indent ->
+          state = listener({:tag, {unquote(md), unquote(tag)}, false}, state)
+          state = rewind_state(state, unquote(outer))
+          state = listener({:tag, {unquote(md), unquote(tag)}, true}, state)
+          state = listener({:tag, {unquote(md), unquote(outer)}, true}, state)
+          state = listener({:tag, {unquote(md), unquote(tag)}, true}, state)
+
+          do_parse(
+            rest,
+            %State{
+              state
+              | path: [
+                  {unquote(tag), unquote(attrs), []},
+                  {unquote(outer), unquote(attrs), []},
+                  {unquote(tag), unquote(attrs), []} | state.path
+                ],
+                indent: pos
+            },
+            {:inner, unquote(tag), pos}
+          )
+
+        {:inner, unquote(tag), pos} when pos < indent ->
+          state = listener({:tag, {unquote(md), unquote(tag)}, false}, state)
+          state = rewind_state(state, unquote(outer))
+          state = listener({:tag, {unquote(md), unquote(outer)}, false}, state)
+          state = to_ast(state)
+          state = rewind_state(state, unquote(outer))
+          state = listener({:tag, {unquote(md), unquote(tag)}, true}, state)
+
+          do_parse(
+            rest,
+            %State{
+              state
+              | path: [{unquote(tag), unquote(attrs), []} | state.path],
+                indent: pos
+            },
+            {:inner, unquote(tag), pos}
           )
       end
     end
 
-    defp do_parse(<<unquote(md), _::binary>> = input, state(), :linefeed) do
+    defp do_parse(<<unquote(md), _::binary>> = input, state(), {:linefeed, pos}) do
       state = rewind_state(state, unquote(tag))
-      do_parse(input, state, :linefeed)
+      do_parse(input, state, {:linefeed, pos})
     end
   end)
 
@@ -242,7 +288,7 @@ defmodule Md.Parser do
 
       do_parse(
         rest,
-        %State{state | path: [{unquote(tag), unquote(attrs), [""]} | state.path]},
+        %State{state | path: [{unquote(tag), unquote(attrs), []} | state.path]},
         :md
       )
     end
@@ -308,10 +354,10 @@ defmodule Md.Parser do
   defp push_char(x, state, mode) do
     path =
       case {mode, state.path} do
-        {:linefeed, []} ->
+        {{:linefeed, _}, []} ->
           [{syntax()[:outer], nil, [x]}]
 
-        # {:linefeed, path} ->
+        # {{:linefeed, _}, path} ->
         #   [{syntax()[:outer], nil, [x]} | path]
 
         {_, [{elem, attrs, [txt | branch]} | rest]} when is_binary(txt) ->

@@ -26,7 +26,8 @@ defmodule Md.Listener do
           path: [trace()],
           ast: [branch()],
           listener: module(),
-          bag: list()
+          bag: list(),
+          indent: non_neg_integer()
         }
 
   @callback element(context(), state()) :: :ok | {:update, state()}
