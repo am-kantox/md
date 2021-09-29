@@ -21,7 +21,7 @@ defmodule MdTest do
                {:p, nil,
                 [
                   "he*llo  ",
-                  {:b, nil, ["foo ", {:strong, %{class: "red"}, ["bar"]}, " baz"]},
+                  {:b, nil, ["foo ", {:strong, %{class: "red"}, ["bar"]}, "  baz"]},
                   " 42 "
                 ]},
                {:blockquote, nil, ["Hi, ", {:b, nil, ["there "]}, "olala "]},

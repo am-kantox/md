@@ -2,7 +2,8 @@
 
 ## Header 2
 
-   he\*llo  *foo **bar** baz* 42
+   he\*llo  *foo **bar** 
+baz* 42
 
 > Hi, *there
 > olala

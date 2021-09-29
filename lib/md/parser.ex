@@ -1,11 +1,39 @@
 defmodule Md.Parser do
   @default_syntax [
     outer: :p,
+    span: :span,
     flush: [
       {"---", %{tag: :hr}}
     ],
     magnet: [
       {"¡", %{tag: :abbr}}
+    ],
+    pair: [
+      {"![",
+       %{
+         tag: :figure,
+         closing: "]",
+         inner_opening: "(",
+         inner_closing: ")",
+         inner_tag: :img,
+         outer: {:tag, :figcaption}
+       }},
+      {"?[",
+       %{
+         tag: :abbr,
+         closing: "]",
+         inner_opening: "(",
+         inner_closing: ")",
+         outer: {:attribute, :title}
+       }},
+      {"[",
+       %{
+         tag: :a,
+         closing: "]",
+         inner_opening: "(",
+         inner_closing: ")",
+         outer: {:attribute, :href}
+       }}
     ],
     paragraph: [
       {"#", %{tag: :h1}},
@@ -74,8 +102,9 @@ defmodule Md.Parser do
 
   @type parse_mode ::
           :none
-          | :md
           | :raw
+          | :md
+          | :pair
           | {:linefeed, non_neg_integer()}
           | {:nested, L.element(), non_neg_integer()}
           | {:inner, L.element(), non_neg_integer()}
@@ -94,6 +123,12 @@ defmodule Md.Parser do
     do_parse(rest, push_char(?\s, state, :md), {:linefeed, 0})
   end
 
+  defp do_parse(<<?\n, rest::binary>>, state(), {:linefeed, _}) do
+    state = listener(:break, state)
+    state = %State{state | indent: []}
+    do_parse(rest, rewind_state(state), {:linefeed, 0})
+  end
+
   ## linefeed mode
   defp do_parse(<<?\s, rest::binary>>, state(), {:linefeed, pos}) do
     state = listener(:whitespace, state)
@@ -101,14 +136,17 @@ defmodule Md.Parser do
   end
 
   defp do_parse(<<?\s, rest::binary>>, state(), {:nested, _, _} = nested) do
-    state = listener(:whitespace, state)
     do_parse(rest, state, nested)
   end
 
-  defp do_parse(<<?\n, rest::binary>>, state(), {:linefeed, _}) do
-    state = listener(:break, state)
-    state = %State{state | indent: []}
-    do_parse(rest, rewind_state(state), {:linefeed, 0})
+  # defp do_parse(<<?\s, rest::binary>>, state(), mode) do
+  #   do_parse(rest, push_char(?\s, state, :md), mode)
+  # end
+
+  ## escaped symbol
+  defp do_parse(<<?\\, x::utf8, rest::binary>>, state(), mode) when mode != :raw do
+    state = listener({:esc, <<x::utf8>>}, state)
+    do_parse(<<x::utf8, rest::binary>>, state, :raw)
   end
 
   Enum.each(@syntax[:flush], fn {md, properties} ->
@@ -127,11 +165,62 @@ defmodule Md.Parser do
     end
   end)
 
-  ## escaped symbol
-  defp do_parse(<<?\\, x::utf8, rest::binary>>, state(), mode) when mode != :raw do
-    state = listener({:esc, <<x::utf8>>}, state)
-    do_parse(<<x::utf8, rest::binary>>, state, :raw)
-  end
+  Enum.each(@syntax[:pair], fn {md, properties} ->
+    tag = properties[:tag]
+    closing = properties[:closing]
+    outer = properties[:outer]
+    inner_opening = properties[:inner_opening]
+    inner_closing = properties[:inner_closing]
+    inner_tag = Map.get(properties, :inner_tag, true)
+    attrs = Macro.escape(properties[:attributes])
+
+    defp do_parse(<<unquote(md), rest::binary>>, state(), :md) do
+      state = listener({:tag, {unquote(md), unquote(tag)}, unquote(inner_tag)}, state)
+
+      do_parse(
+        rest,
+        %State{state | path: [{unquote(tag), unquote(attrs), []} | state.path]},
+        :pair
+      )
+    end
+
+    defp do_parse(
+           <<unquote(closing), unquote(inner_opening), rest::binary>>,
+           %State{path: [{unquote(tag), attrs, content} | path_tail]} = state,
+           :pair
+         ) do
+      do_parse(
+        rest,
+        %State{state | indent: content, path: [{unquote(tag), attrs, []} | path_tail]},
+        :pair
+      )
+    end
+
+    defp do_parse(
+           <<unquote(inner_closing), rest::binary>>,
+           %State{indent: outer_content, path: [{unquote(tag), attrs, [content]} | path_tail]} =
+             state,
+           :pair
+         ) do
+      final_tag =
+        case unquote(outer) do
+          {:tag, {tag, attr}} ->
+            {unquote(tag), attrs,
+             [{unquote(inner_tag), %{attr => content}, []}, {tag, nil, outer_content}]}
+
+          {:tag, tag} ->
+            {unquote(tag), attrs,
+             [{unquote(inner_tag), nil, [content]}, {tag, nil, outer_content}]}
+
+          {:attribute, attribute} ->
+            {unquote(tag), Map.put(attrs || %{}, attribute, content), outer_content}
+        end
+
+      state = to_ast(%State{state | indent: [], path: [final_tag | path_tail]})
+
+      do_parse(rest, state, :md)
+    end
+  end)
 
   Enum.each(@syntax[:paragraph], fn {md, properties} ->
     tag = properties[:tag]
@@ -282,7 +371,7 @@ defmodule Md.Parser do
            mode
          )
          when mode != :raw do
-      do_parse(rest, to_ast(state), :md)
+      do_parse(rest, to_ast(state), mode)
     end
 
     defp do_parse(<<unquote(md), rest::binary>>, state(), mode) when mode != :raw do
@@ -291,7 +380,7 @@ defmodule Md.Parser do
       do_parse(
         rest,
         %State{state | path: [{unquote(tag), unquote(attrs), []} | state.path]},
-        :md
+        mode
       )
     end
   end)
@@ -360,6 +449,9 @@ defmodule Md.Parser do
       case {mode, state.path} do
         {{:linefeed, _}, []} ->
           [{syntax()[:outer], nil, [x]}]
+
+        {:md, []} ->
+          [{syntax()[:span], nil, [x]}]
 
         # {{:linefeed, _}, path} ->
         #   [{syntax()[:outer], nil, [x]} | path]
