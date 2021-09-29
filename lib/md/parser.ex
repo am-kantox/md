@@ -6,7 +6,9 @@ defmodule Md.Parser do
       img: :src
     },
     flush: [
-      {"---", %{tag: :hr}}
+      {"---", %{tag: :hr}},
+      {"  \n", %{tag: :br}},
+      {"  \n", %{tag: :br}}
     ],
     magnet: [
       {"¡", %{tag: :abbr}}
@@ -331,7 +333,6 @@ defmodule Md.Parser do
 
         {:inner, unquote(tag), pos} when pos > indent ->
           state = rewind_state(state, unquote(outer))
-          state = listener({:tag, {unquote(md), unquote(tag)}, true}, state)
           state = listener({:tag, {unquote(md), unquote(outer)}, true}, state)
           state = listener({:tag, {unquote(md), unquote(tag)}, true}, state)
           bag = %{state.bag | indent: [pos | indents]}
@@ -342,8 +343,7 @@ defmodule Md.Parser do
               state
               | path: [
                   {unquote(tag), unquote(attrs), []},
-                  {unquote(outer), unquote(attrs), []},
-                  {unquote(tag), unquote(attrs), []} | state.path
+                  {unquote(outer), unquote(attrs), []} | state.path
                 ],
                 bag: bag
             },
