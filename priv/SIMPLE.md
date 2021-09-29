@@ -8,19 +8,16 @@ baz* 42
 > Hi, *there
 > olala
 
-> Hi, there
-> > 2nd 1st line
-> > 2nd 2nd line
+> Hi, ![image](https://image.com)
+> > 2nd *1st* line
+> > 2nd _2nd_ line
 > boom
 
-- 1 | foo
-- 1 | bar
+- 1 | *foo* foo
+- 1 | bar _bar_
   - 2 | baz
   - 2 | bzz
     - 3 | rgf
 - 1 | zzz
 
-Hi
-
-- 1 | item 1 
-- 1 | item 2
+Hi ![image](https://anchor.com) 1!

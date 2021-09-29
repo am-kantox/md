@@ -26,13 +26,21 @@ defmodule MdTest do
                 ]},
                {:blockquote, nil, ["Hi, ", {:b, nil, ["there "]}, "olala "]},
                {:blockquote, nil,
-                ["Hi, there ", {:blockquote, nil, ["2nd 1st line 2nd 2nd line "]}, "boom "]},
+                [
+                  "Hi, ",
+                  {:figure, nil,
+                   [{:figcaption, nil, ["image"]}, {:img, %{src: "https://image.com"}, []}]},
+                  " ",
+                  {:blockquote, nil,
+                   ["2nd ", {:b, nil, ["1st"]}, " line 2nd ", {:it, nil, ["2nd"]}, " line "]},
+                  "boom "
+                ]},
                {
                  :ul,
                  nil,
                  [
-                   {:li, nil, [" 1 | foo "]},
-                   {:li, nil, [" 1 | bar "]},
+                   {:li, nil, [" 1 | ", {:b, nil, ["foo"]}, " foo "]},
+                   {:li, nil, [" 1 | bar ", {:it, nil, ["bar"]}, " "]},
                    {:li, nil,
                     [
                       {:ul, nil,
@@ -45,8 +53,13 @@ defmodule MdTest do
                    {:li, nil, [" 1 | zzz "]}
                  ]
                },
-               {:p, nil, ["Hi "]},
-               {:ul, nil, [{:li, nil, [" 1 | item 1  "]}, {:li, nil, [" 1 | item 2 "]}]}
+               {:p, nil,
+                [
+                  "Hi ",
+                  {:figure, nil,
+                   [{:figcaption, nil, ["image"]}, {:img, %{src: "https://anchor.com"}, []}]},
+                  " 1! "
+                ]}
              ],
              listener: Md.Listener.Debug
            }

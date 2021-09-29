@@ -2,6 +2,11 @@ defmodule Md.Parser do
   @default_syntax [
     outer: :p,
     span: :span,
+    fixes: %{
+      img: :src,
+      abbr: :title,
+      a: :href
+    },
     flush: [
       {"---", %{tag: :hr}}
     ],
@@ -174,7 +179,7 @@ defmodule Md.Parser do
     inner_tag = Map.get(properties, :inner_tag, true)
     attrs = Macro.escape(properties[:attributes])
 
-    defp do_parse(<<unquote(md), rest::binary>>, state(), :md) do
+    defp do_parse(<<unquote(md), rest::binary>>, state(), mode) when mode != :raw do
       state = listener({:tag, {unquote(md), unquote(tag)}, unquote(inner_tag)}, state)
 
       do_parse(
@@ -187,12 +192,13 @@ defmodule Md.Parser do
     defp do_parse(
            <<unquote(closing), unquote(inner_opening), rest::binary>>,
            %State{path: [{unquote(tag), attrs, content} | path_tail]} = state,
-           :pair
-         ) do
+           mode
+         )
+         when mode != :raw do
       do_parse(
         rest,
         %State{state | indent: content, path: [{unquote(tag), attrs, []} | path_tail]},
-        :pair
+        mode
       )
     end
 
@@ -200,17 +206,24 @@ defmodule Md.Parser do
            <<unquote(inner_closing), rest::binary>>,
            %State{indent: outer_content, path: [{unquote(tag), attrs, [content]} | path_tail]} =
              state,
-           :pair
-         ) do
+           mode
+         )
+         when mode != :raw do
       final_tag =
         case unquote(outer) do
           {:tag, {tag, attr}} ->
             {unquote(tag), attrs,
-             [{unquote(inner_tag), %{attr => content}, []}, {tag, nil, outer_content}]}
+             [
+               {unquote(inner_tag), %{attr => content}, []},
+               fix_element({tag, nil, outer_content})
+             ]}
 
           {:tag, tag} ->
             {unquote(tag), attrs,
-             [{unquote(inner_tag), nil, [content]}, {tag, nil, outer_content}]}
+             [
+               fix_element({unquote(inner_tag), nil, [content]}),
+               fix_element({tag, nil, outer_content})
+             ]}
 
           {:attribute, attribute} ->
             {unquote(tag), Map.put(attrs || %{}, attribute, content), outer_content}
@@ -466,16 +479,26 @@ defmodule Md.Parser do
     %State{state | path: path}
   end
 
+  @spec fix_element(L.branch()) :: L.branch()
+  Enum.each(@syntax[:fixes], fn {tag, attribute} ->
+    defp fix_element({unquote(tag), attrs, [attr | content]}),
+      do: {unquote(tag), Map.put(attrs || %{}, unquote(attribute), attr), content}
+  end)
+
+  defp fix_element(element), do: element
+
   @spec to_ast(L.state()) :: L.state()
   defp to_ast(%State{path: []} = state), do: state
 
   defp to_ast(%State{path: [{tag, _, _} = last], ast: ast} = state) do
-    state = %State{state | path: [], ast: [reverse(last) | ast]}
+    last = last |> reverse() |> fix_element()
+    state = %State{state | path: [], ast: [last | ast]}
     listener({:tag, tag, false}, state)
   end
 
   defp to_ast(%State{path: [{tag, _, _} = last, {elem, attrs, branch} | rest]} = state) do
-    state = %State{state | path: [{elem, attrs, [reverse(last) | branch]} | rest]}
+    last = last |> reverse() |> fix_element()
+    state = %State{state | path: [{elem, attrs, [last | branch]} | rest]}
     listener({:tag, tag, false}, state)
   end
 
