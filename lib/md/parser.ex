@@ -52,7 +52,18 @@ defmodule Md.Parser do
     ],
     list: [
       {"- ", %{tag: :li, outer: :ul}},
-      {"* ", %{tag: :li, outer: :ul}}
+      {"* ", %{tag: :li, outer: :ul}},
+      {"+ ", %{tag: :li, outer: :ul}},
+      {"1. ", %{tag: :li, outer: :ol}},
+      {"2. ", %{tag: :li, outer: :ol}},
+      {"3. ", %{tag: :li, outer: :ol}},
+      {"4. ", %{tag: :li, outer: :ol}},
+      {"5. ", %{tag: :li, outer: :ol}},
+      {"6. ", %{tag: :li, outer: :ol}},
+      {"7. ", %{tag: :li, outer: :ol}},
+      {"8. ", %{tag: :li, outer: :ol}},
+      {"9. ", %{tag: :li, outer: :ol}},
+      {"10. ", %{tag: :li, outer: :ol}}
     ],
     brace: [
       {"*", %{tag: :b}},
