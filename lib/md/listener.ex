@@ -17,7 +17,7 @@ defmodule Md.Listener do
           | :whitespace
           | :finalize
           | :end
-          | {:tag, {binary(), element()}, nil | true | false}
+          | {:tag, {binary(), element()}, atom()}
           | {:esc, binary()}
           | {:char, binary()}
 
@@ -26,8 +26,7 @@ defmodule Md.Listener do
           path: [trace()],
           ast: [branch()],
           listener: module(),
-          bag: list(),
-          indent: [non_neg_integer()]
+          bag: %{indent: [non_neg_integer()], stock: [branch()]}
         }
 
   @callback element(context(), state()) :: :ok | {:update, state()}

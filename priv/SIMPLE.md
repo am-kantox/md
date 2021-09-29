@@ -20,4 +20,7 @@ baz* 42
     - 3 | rgf
 - 1 | zzz
 
-Hi ![image](https://anchor.com) 1!
+Hi [anchor](https://anchor.com) 1!
+
+* Hi [anchor](https://anchor.com) *bar*
+* baz

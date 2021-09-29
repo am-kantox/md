@@ -25,4 +25,6 @@ md-*.tar
 # Temporary files, for example, from tests.
 /tmp/
 
+/priv/*.htm*
+
 .dialyzer/plts/*plt*

@@ -39,26 +39,32 @@ defmodule MdTest do
                  :ul,
                  nil,
                  [
-                   {:li, nil, [" 1 | ", {:b, nil, ["foo"]}, " foo "]},
-                   {:li, nil, [" 1 | bar ", {:it, nil, ["bar"]}, " "]},
+                   {:li, nil, ["1 | ", {:b, nil, ["foo"]}, " foo "]},
+                   {:li, nil, ["1 | bar ", {:it, nil, ["bar"]}, " "]},
                    {:li, nil,
                     [
                       {:ul, nil,
                        [
-                         {:li, nil, [" 2 | baz "]},
-                         {:li, nil, [" 2 | bzz "]},
-                         {:li, nil, [{:ul, nil, [{:li, nil, [" 3 | rgf "]}]}]}
+                         {:li, nil, ["2 | baz "]},
+                         {:li, nil, ["2 | bzz "]},
+                         {:li, nil, [{:ul, nil, [{:li, nil, ["3 | rgf "]}]}]}
                        ]}
                     ]},
-                   {:li, nil, [" 1 | zzz "]}
+                   {:li, nil, ["1 | zzz "]}
                  ]
                },
-               {:p, nil,
+               {:p, nil, ["Hi ", {:a, %{href: "https://anchor.com"}, ["anchor"]}, " 1! "]},
+               {:ul, nil,
                 [
-                  "Hi ",
-                  {:figure, nil,
-                   [{:figcaption, nil, ["image"]}, {:img, %{src: "https://anchor.com"}, []}]},
-                  " 1! "
+                  {:li, nil,
+                   [
+                     "Hi ",
+                     {:a, %{href: "https://anchor.com"}, ["anchor"]},
+                     " ",
+                     {:b, nil, ["bar"]},
+                     " "
+                   ]},
+                  {:li, nil, ["baz "]}
                 ]}
              ],
              listener: Md.Listener.Debug
