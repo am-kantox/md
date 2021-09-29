@@ -58,7 +58,8 @@ defmodule Md.Parser do
       {"**", %{tag: :strong, attributes: %{class: "red"}}},
       {"__", %{tag: :em}},
       {"~", %{tag: :s}},
-      {"~~", %{tag: :del}}
+      {"~~", %{tag: :del}},
+      {"`", %{tag: :code, attributes: %{class: "code-inline"}}}
     ]
   ]
 

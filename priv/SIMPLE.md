@@ -10,7 +10,7 @@ baz* 42
 
 > Hi, ![image](https://image.com)
 > > 2nd *1st* line
-> > 2nd _2nd_ line
+> > 2nd `2nd` line
 > boom
 
 - 1 | *foo* foo

@@ -32,7 +32,13 @@ defmodule MdTest do
                    [{:figcaption, nil, ["image"]}, {:img, %{src: "https://image.com"}, []}]},
                   " ",
                   {:blockquote, nil,
-                   ["2nd ", {:b, nil, ["1st"]}, " line 2nd ", {:it, nil, ["2nd"]}, " line "]},
+                   [
+                     "2nd ",
+                     {:b, nil, ["1st"]},
+                     " line 2nd ",
+                     {:code, %{class: "code-inline"}, ["2nd"]},
+                     " line "
+                   ]},
                   "boom "
                 ]},
                {
