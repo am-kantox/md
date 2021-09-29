@@ -47,14 +47,11 @@ defmodule MdTest do
                  [
                    {:li, nil, ["1 | ", {:b, nil, ["foo"]}, " foo "]},
                    {:li, nil, ["1 | bar ", {:it, nil, ["bar"]}, " "]},
-                   {:li, nil,
+                   {:ul, nil,
                     [
-                      {:ul, nil,
-                       [
-                         {:li, nil, ["2 | baz "]},
-                         {:li, nil, ["2 | bzz "]},
-                         {:li, nil, [{:ul, nil, [{:li, nil, ["3 | rgf "]}]}]}
-                       ]}
+                      {:li, nil, ["2 | baz "]},
+                      {:li, nil, ["2 | bzz "]},
+                      {:ul, nil, [{:li, nil, ["3 | rgf "]}]}
                     ]},
                    {:li, nil, ["1 | zzz "]}
                  ]
