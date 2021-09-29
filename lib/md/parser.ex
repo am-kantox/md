@@ -134,6 +134,24 @@ defmodule Md.Parser do
     do_parse(input, state, {:linefeed, 0})
   end
 
+  ## escaped symbol
+  defp do_parse(<<?\\, x::utf8, rest::binary>>, state(), mode) when mode != :raw do
+    state = listener({:esc, <<x::utf8>>}, state)
+    do_parse(<<x::utf8, rest::binary>>, state, :raw)
+  end
+
+  Enum.each(@syntax[:flush], fn {md, properties} ->
+    tag = properties[:tag]
+    attrs = Macro.escape(properties[:attributes])
+
+    defp do_parse(<<unquote(md), rest::binary>>, state(), mode) when mode != :raw do
+      state = listener({:tag, {unquote(md), unquote(tag)}, nil}, state)
+      state = to_ast(%State{state | path: [{unquote(tag), unquote(attrs), []} | state.path]})
+
+      do_parse(rest, state, {:linefeed, 0})
+    end
+  end)
+
   # → :linefeed
   defp do_parse(<<?\n, rest::binary>>, state(), :md) do
     state = listener(:linefeed, state)
@@ -158,28 +176,6 @@ defmodule Md.Parser do
   # defp do_parse(<<?\s, rest::binary>>, state(), mode) do
   #   do_parse(rest, push_char(?\s, state, :md), mode)
   # end
-
-  ## escaped symbol
-  defp do_parse(<<?\\, x::utf8, rest::binary>>, state(), mode) when mode != :raw do
-    state = listener({:esc, <<x::utf8>>}, state)
-    do_parse(<<x::utf8, rest::binary>>, state, :raw)
-  end
-
-  Enum.each(@syntax[:flush], fn {md, properties} ->
-    tag = properties[:tag]
-    attrs = Macro.escape(properties[:attributes])
-
-    defp do_parse(<<unquote(md), rest::binary>>, state(), {:linefeed, _}) do
-      state = listener({:tag, {unquote(md), unquote(tag)}, nil}, state)
-      state = rewind_state(state)
-
-      do_parse(
-        rest,
-        %State{state | path: [{unquote(tag), unquote(attrs), []} | state.path]},
-        {:linefeed, 0}
-      )
-    end
-  end)
 
   Enum.each(@syntax[:pair], fn {md, properties} ->
     tag = properties[:tag]

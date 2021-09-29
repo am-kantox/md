@@ -3,7 +3,7 @@ defmodule MdTest do
   doctest Md
 
   test "leading spaces" do
-    assert Md.parse(" he\\*llo \n  *foo **bar baz \n   \n Answer: _42_.") == %Md.Parser.State{
+    assert Md.parse(" he\\*llo \n  *foo **bar baz \n\n Answer: _42_.") == %Md.Parser.State{
              ast: [
                {:p, nil,
                 ["he*llo  ", {:b, nil, ["foo ", {:strong, %{class: "red"}, ["bar baz  "]}]}]},
