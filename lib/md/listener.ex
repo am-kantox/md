@@ -11,12 +11,13 @@ defmodule Md.Listener do
   @type trace :: branch()
 
   @type parse_mode ::
-          :none
+          :idle
+          | :finished
           | :raw
           | :md
           | {:linefeed, non_neg_integer()}
-          | {:nested, L.element(), non_neg_integer()}
-          | {:inner, L.element(), non_neg_integer()}
+          | {:nested, element(), non_neg_integer()}
+          | {:inner, element(), non_neg_integer()}
 
   @type context ::
           :start

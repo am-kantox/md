@@ -9,7 +9,7 @@ defmodule Md do
   ## Examples
 
       iex> Md.parse("   foo")
-      %Md.Parser.State{ast: [{:p, nil, ["foo"]}], listener: Md.Listener.Debug}
+      %Md.Parser.State{ast: [{:p, nil, ["foo"]}], listener: Md.Listener.Debug, mode: [:finished]}
 
   """
   defdelegate parse(input), to: Md.Parser
