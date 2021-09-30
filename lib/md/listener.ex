@@ -10,6 +10,14 @@ defmodule Md.Listener do
   @type branch :: {element(), attributes(), [leaf() | branch()]}
   @type trace :: branch()
 
+  @type parse_mode ::
+          :none
+          | :raw
+          | :md
+          | {:linefeed, non_neg_integer()}
+          | {:nested, L.element(), non_neg_integer()}
+          | {:inner, L.element(), non_neg_integer()}
+
   @type context ::
           :start
           | :break
@@ -24,6 +32,7 @@ defmodule Md.Listener do
   @type state :: %{
           __struct__: Md.Parser.State,
           path: [trace()],
+          mode: parse_mode(),
           ast: [branch()],
           listener: module(),
           bag: %{indent: [non_neg_integer()], stock: [branch()]}
