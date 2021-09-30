@@ -32,7 +32,7 @@ defmodule Md.Listener do
   @type state :: %{
           __struct__: Md.Parser.State,
           path: [trace()],
-          mode: parse_mode(),
+          mode: [parse_mode()],
           ast: [branch()],
           listener: module(),
           bag: %{indent: [non_neg_integer()], stock: [branch()]}
