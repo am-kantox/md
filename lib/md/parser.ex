@@ -143,9 +143,9 @@ defmodule Md.Parser do
     state =
       state
       |> listener({:esc, <<x::utf8>>})
-      |> replace_mode(:raw)
+      |> push_char(x)
 
-    do_parse(<<x::utf8, rest::binary>>, state)
+    do_parse(rest, state)
   end
 
   Enum.each(@syntax[:flush], fn {md, properties} ->
@@ -261,9 +261,11 @@ defmodule Md.Parser do
             {unquote(tag), Map.put(attrs || %{}, attribute, content), outer_content}
         end
 
-      # FIXME
-      state = to_ast(%State{state | bag: %{state.bag | stock: []}, path: [final_tag | path_tail]})
-      state = replace_mode(state, :md)
+      state =
+        %State{state | bag: %{state.bag | stock: []}, path: [final_tag | path_tail]}
+        |> to_ast()
+        |> replace_mode(:md)
+
       do_parse(rest, state)
     end
   end)
@@ -298,7 +300,6 @@ defmodule Md.Parser do
           do_parse(rest, state)
 
         :md ->
-          state = replace_mode(state, :md)
           state = push_char(state, unquote(md))
           do_parse(rest, state)
 
@@ -307,13 +308,13 @@ defmodule Md.Parser do
           do_parse(rest, state)
 
         {:nested, unquote(tag), level} ->
-          state = listener(state, {:tag, {unquote(md), unquote(tag)}, true})
-          state = replace_mode(state, {:nested, unquote(tag), level + 1})
+          state =
+            state
+            |> listener({:tag, {unquote(md), unquote(tag)}, true})
+            |> replace_mode({:nested, unquote(tag), level + 1})
+            |> push_path({unquote(tag), unquote(attrs), []})
 
-          do_parse(
-            rest,
-            %State{state | path: [{unquote(tag), unquote(attrs), []} | state.path]}
-          )
+          do_parse(rest, state)
       end
     end
 
@@ -424,20 +425,27 @@ defmodule Md.Parser do
 
   Enum.each(@syntax[:brace], fn {md, properties} ->
     tag = properties[:tag]
+    mode = properties[:mode]
     attrs = Macro.escape(properties[:attributes])
 
     defp do_parse(
            <<unquote(md), rest::binary>>,
            %State{mode: [mode | _], path: [{unquote(tag), _, _} | _]} = state
          )
-         when mode != :raw do
-      do_parse(rest, to_ast(state))
+         when mode == unquote(mode) or mode != :raw do
+      state =
+        state
+        |> to_ast()
+        |> pop_mode(unquote(mode))
+
+      do_parse(rest, state)
     end
 
     defp do_parse(<<unquote(md), rest::binary>>, state()) when mode != :raw do
       state =
         state
         |> listener({:tag, {unquote(md), unquote(tag)}, true})
+        |> push_mode(unquote(mode))
         |> push_path({unquote(tag), unquote(attrs), []})
 
       do_parse(rest, state)
@@ -460,7 +468,7 @@ defmodule Md.Parser do
           state
       end
       |> push_char(x)
-      |> replace_mode(:md)
+      |> replace_mode(if mode in [:raw, :md], do: mode, else: :md)
 
     do_parse(rest, state)
   end
@@ -518,15 +526,21 @@ defmodule Md.Parser do
   @spec set_mode(L.state(), L.parse_mode()) :: L.state()
   defp set_mode(state(), value), do: %State{state | mode: [value]}
 
-  @spec replace_mode(L.state(), L.parse_mode()) :: L.state()
+  @spec replace_mode(L.state(), L.parse_mode() | nil) :: L.state()
+  defp replace_mode(state(), nil), do: state
+
   defp replace_mode(%State{mode: [_ | modes]} = state, value),
     do: %State{state | mode: [value | modes]}
 
-  # @spec push_mode(L.state(), L.parse_mode()) :: L.state()
-  # defp push_mode(state(), value), do: %State{state | mode: [value | mode]}
+  @spec push_mode(L.state(), L.parse_mode()) :: L.state()
+  defp push_mode(state(), nil), do: state
+  defp push_mode(state(), value), do: %State{state | mode: [value | state.mode]}
 
   # @spec pop_mode(L.state()) :: L.state()
-  # defp pop_mode(state()), do: %State{state | mode: tl(mode)}
+  # defp pop_mode(state()), do: %State{state | mode: tl(state.mode)}
+  @spec pop_mode(L.state(), L.element()) :: L.state()
+  defp pop_mode(state(), mode), do: %State{state | mode: tl(state.mode)}
+  defp pop_mode(state(), _), do: state
 
   @spec push_path(L.state(), L.branch()) :: L.state()
   defp push_path(%State{path: path} = state, element),
