@@ -53,21 +53,12 @@ defmodule Md.Parser do
       # nested
       {">", %{tag: :blockquote}}
     ],
-    list: [
-      {"- ", %{tag: :li, outer: :ul}},
-      {"* ", %{tag: :li, outer: :ul}},
-      {"+ ", %{tag: :li, outer: :ul}},
-      {"1. ", %{tag: :li, outer: :ol}},
-      {"2. ", %{tag: :li, outer: :ol}},
-      {"3. ", %{tag: :li, outer: :ol}},
-      {"4. ", %{tag: :li, outer: :ol}},
-      {"5. ", %{tag: :li, outer: :ol}},
-      {"6. ", %{tag: :li, outer: :ol}},
-      {"7. ", %{tag: :li, outer: :ol}},
-      {"8. ", %{tag: :li, outer: :ol}},
-      {"9. ", %{tag: :li, outer: :ol}},
-      {"10. ", %{tag: :li, outer: :ol}}
-    ],
+    list:
+      [
+        {"- ", %{tag: :li, outer: :ul}},
+        {"* ", %{tag: :li, outer: :ul}},
+        {"+ ", %{tag: :li, outer: :ul}}
+      ] ++ Enum.map(0..100, &{"#{&1}. ", %{tag: :li, outer: :ol}}),
     brace: [
       {"*", %{tag: :b}},
       {"_", %{tag: :it}},
@@ -162,7 +153,7 @@ defmodule Md.Parser do
 
   Enum.each(@syntax[:flush], fn {md, properties} ->
     rewind = Map.get(properties, :rewind, false)
-    tag = properties[:tag]
+    [tag | _] = tags = List.wrap(properties[:tag])
     attrs = Macro.escape(properties[:attributes])
 
     defp do_parse(<<unquote(md), rest::binary>>, state()) when mode != :raw do
@@ -170,8 +161,8 @@ defmodule Md.Parser do
         unquote(rewind)
         |> if(do: rewind_state(state), else: state)
         |> listener({:tag, {unquote(md), unquote(tag)}, nil})
-        |> push_path({unquote(tag), unquote(attrs), []})
-        |> to_ast()
+        |> push_path(for tag <- unquote(tags), do: {tag, unquote(attrs), []})
+        |> rewind_state(until: unquote(tag), inclusive: true)
         |> set_mode({:linefeed, 0})
 
       do_parse(rest, state)
@@ -180,16 +171,18 @@ defmodule Md.Parser do
 
   Enum.each(@syntax[:block], fn {md, properties} ->
     [tag | _] = tags = properties[:tag]
+    mode = properties[:mode]
+    attrs = Macro.escape(properties[:attributes])
+
     us = Macro.var(:_, %Macro.Env{}.context)
     closing_match = Enum.reduce(tags, [], &[{:{}, [], [&1, us, us]} | &2])
-    attrs = Macro.escape(properties[:attributes])
 
     defp do_parse(<<unquote(md), rest::binary>>, state_linefeed()) do
       state =
         state
         |> listener({:tag, {unquote(md), unquote(tag)}, true})
         |> push_path(for tag <- unquote(tags), do: {tag, unquote(attrs), []})
-        |> set_mode(:raw)
+        |> set_mode(unquote(mode))
 
       do_parse(rest, state)
     end
