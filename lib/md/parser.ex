@@ -130,14 +130,21 @@ defmodule Md.Parser do
 
   # :start
   defp do_parse(input, initial()) do
-    state = listener(state, :start)
-    do_parse(input, %State{state | mode: [{:linefeed, 0}]})
+    state =
+      state
+      |> listener(:start)
+      |> set_mode({:linefeed, 0})
+
+    do_parse(input, state)
   end
 
   ## escaped symbol
   defp do_parse(<<?\\, x::utf8, rest::binary>>, state()) when mode != :raw do
-    state = listener(state, {:esc, <<x::utf8>>})
-    state = replace_mode(state, :raw)
+    state =
+      state
+      |> listener({:esc, <<x::utf8>>})
+      |> replace_mode(:raw)
+
     do_parse(<<x::utf8, rest::binary>>, state)
   end
 
@@ -147,10 +154,13 @@ defmodule Md.Parser do
     attrs = Macro.escape(properties[:attributes])
 
     defp do_parse(<<unquote(md), rest::binary>>, state()) when mode != :raw do
-      state = if unquote(rewind), do: rewind_state(state), else: state
-      state = listener(state, {:tag, {unquote(md), unquote(tag)}, nil})
-      state = to_ast(%State{state | path: [{unquote(tag), unquote(attrs), []} | state.path]})
-      state = set_mode(state, {:linefeed, 0})
+      state =
+        unquote(rewind)
+        |> if(do: rewind_state(state), else: state)
+        |> listener({:tag, {unquote(md), unquote(tag)}, nil})
+        |> push_path({unquote(tag), unquote(attrs), []})
+        |> to_ast()
+        |> set_mode({:linefeed, 0})
 
       do_parse(rest, state)
     end
@@ -439,12 +449,7 @@ defmodule Md.Parser do
       case mode do
         {:nested, tag, level} ->
           current_level = level(state, tag)
-
-          # Backward compatible version of
-          # Enum.reduce(level..(current_level - 1)//1, state, fn _, state ->
-          for i <- level..current_level, i > level, reduce: state do
-            acc -> rewind_state(acc, until: tag, count: 1)
-          end
+          rewind_state(state, until: tag, count: current_level - level, inclusive: true)
 
         _ ->
           state
@@ -512,26 +517,34 @@ defmodule Md.Parser do
   defp replace_mode(%State{mode: [_ | modes]} = state, value),
     do: %State{state | mode: [value | modes]}
 
-  @spec push_mode(L.state(), L.parse_mode()) :: L.state()
-  defp push_mode(state(), value), do: %State{state | mode: [value | mode]}
+  # @spec push_mode(L.state(), L.parse_mode()) :: L.state()
+  # defp push_mode(state(), value), do: %State{state | mode: [value | mode]}
 
-  @spec pop_mode(L.state()) :: L.state()
-  defp pop_mode(state()), do: %State{state | mode: tl(mode)}
+  # @spec pop_mode(L.state()) :: L.state()
+  # defp pop_mode(state()), do: %State{state | mode: tl(mode)}
 
-  @spec rewind_state(L.state(), [{:until, L.element()} | {:count, pos_integer()}]) :: L.state()
+  @spec push_path(L.state(), L.branch()) :: L.state()
+  defp push_path(%State{path: path} = state, element),
+    do: %State{state | path: [element | path]}
+
+  @spec rewind_state(L.state(), [
+          {:until, L.element()} | {:count, pos_integer()} | {:inclusive, boolean()}
+        ]) :: L.state()
   defp rewind_state(state, params \\ []) do
     until = Keyword.get(params, :until, nil)
-    count = Keyword.get(params, :count, 0)
+    count = Keyword.get(params, :count, 1)
+    inclusive = Keyword.get(params, :inclusive, false)
 
-    state =
-      Enum.reduce_while(state.path, state, fn
-        {^until, _, _}, acc -> {:halt, acc}
-        _, acc -> {:cont, to_ast(acc)}
-      end)
+    for i <- 1..count, count > 0, reduce: state do
+      acc ->
+        state =
+          Enum.reduce_while(state.path, acc, fn
+            {^until, _, _}, acc -> {:halt, acc}
+            _, acc -> {:cont, to_ast(acc)}
+          end)
 
-    if count > 0,
-      do: Enum.reduce(1..count, state, fn _, acc -> to_ast(acc) end),
-      else: state
+        if i < count or inclusive, do: to_ast(state), else: state
+    end
   end
 
   @spec fix_element(L.branch()) :: L.branch()
