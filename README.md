@@ -1,21 +1,16 @@
-# Md
+# Md [![Kantox ❤ OSS](https://img.shields.io/badge/❤-kantox_oss-informational.svg)](https://kantox.com/)  ![Test](https://github.com/am-kantox/md/workflows/Test/badge.svg)  ![Dialyzer](https://github.com/am-kantox/md/workflows/Dialyzer/badge.svg)
 
-**TODO: Add description**
+**Stream markup parser, extendable, flexible, blazingly fast, with callbacks and more, ready for markdown…**
 
 ## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `md` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:md, "~> 0.1.0"}
+    {:md, "~> 0.1"}
   ]
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/md](https://hexdocs.pm/md).
+## [Documentation](https://hexdocs.pm/md)
 

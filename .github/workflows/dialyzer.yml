@@ -1,4 +1,4 @@
-name: Dialyzer Nightly
+name: Dialyzer
 
 on:
   schedule:
