@@ -571,6 +571,7 @@ defmodule Md.Parser do
   defp push_mode(state(), nil), do: state
   defp push_mode(state(), value), do: %State{state | mode: [value | state.mode]}
 
+  @dialyzer {:nowarn_function, pop_mode: 2}
   # @spec pop_mode(L.state()) :: L.state()
   # defp pop_mode(state()), do: %State{state | mode: tl(state.mode)}
   @spec pop_mode(L.state(), L.element()) :: L.state()
