@@ -67,7 +67,7 @@ defmodule Md.MixProject do
   defp package do
     [
       name: @app,
-      files: ~w|config lib mix.exs README.md|,
+      files: ~w|lib mix.exs README.md|,
       maintainers: ["Aleksei Matiushkin"],
       licenses: ["MIT"],
       links: %{
