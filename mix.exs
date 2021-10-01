@@ -82,11 +82,9 @@ defmodule Md.MixProject do
       main: "README.md",
       source_ref: "v#{@version}",
       canonical: "http://hexdocs.pm/#{@app}",
-      logo: "stuff/logo-48.png",
+      # logo: "stuff/logo-48.png",
       source_url: "https://github.com/am-kantox/#{@app}",
-      extras: [
-        "stuff/#{@app}.md"
-      ],
+      extras: [],
       groups_for_modules: []
     ]
   end
