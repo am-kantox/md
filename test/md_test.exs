@@ -59,6 +59,7 @@ defmodule MdTest do
                  ]
                },
                {:p, nil, ["Hi ", {:a, %{href: "https://anchor.com"}, ["anchor"]}, " 1! "]},
+               {:pre, nil, [{:code, nil, ["elixir\ndef foo, do: :ok\n"]}]},
                {:ul, nil,
                 [
                   {:li, nil,

@@ -22,5 +22,9 @@ baz* 42
 
 Hi [anchor](https://anchor.com) 1!
 
+```elixir
+def foo, do: :ok
+```
+
 * Hi [anchor](https://anchor.com) *bar*
 * baz
