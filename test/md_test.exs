@@ -4,6 +4,7 @@ defmodule MdTest do
 
   test "leading spaces" do
     assert Md.parse(" he\\*llo \n  *foo **bar baz \n\n Answer: _42_.") == %Md.Parser.State{
+             mode: [:finished],
              ast: [
                {:p, nil,
                 ["he*llo  ", {:b, nil, ["foo ", {:strong, %{class: "red"}, ["bar baz  "]}]}]},
@@ -15,6 +16,7 @@ defmodule MdTest do
 
   test "simple markdown" do
     assert "priv/SIMPLE.md" |> File.read!() |> Md.parse() == %Md.Parser.State{
+             mode: [:finished],
              ast: [
                {:h1, nil, ["Header 1 "]},
                {:h2, nil, ["Header 2 "]},
