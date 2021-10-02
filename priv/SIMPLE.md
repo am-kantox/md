@@ -24,6 +24,8 @@ Hi [anchor](https://anchor.com) 1!
 
 ```elixir
 def foo, do: :ok
+
+def bar, do: :error
 ```
 
 * Hi [anchor](https://anchor.com) *bar*

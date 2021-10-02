@@ -3,8 +3,10 @@ defmodule Md do
   Documentation for `Md`.
   """
 
+  @behaviour Md.Parser
+
   @doc """
-  Hello world.
+  Interface to the library.
 
   ## Examples
 
@@ -12,8 +14,8 @@ defmodule Md do
       %Md.Parser.State{ast: [{:p, nil, ["foo"]}], listener: Md.Listener.Debug, mode: [:finished]}
 
   """
-  defdelegate parse(input), to: Md.Parser
-  defdelegate parse(input, listener), to: Md.Parser
+  defdelegate parse(input), to: Md.Parser.Default
+  defdelegate parse(input, listener), to: Md.Parser.Default
   defdelegate generate(input), to: Md.Parser
   defdelegate generate(input, options), to: Md.Parser
 end
