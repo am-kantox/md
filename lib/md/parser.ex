@@ -3,6 +3,7 @@ defmodule Md.Parser do
 
   """
   alias Md.Listener, as: L
+  alias Md.Parser.Default, as: DefaultParser
 
   defmodule State do
     @moduledoc """
@@ -36,7 +37,7 @@ defmodule Md.Parser do
   def generate(input, options \\ [])
 
   def generate(input, options) when is_binary(input),
-    do: input |> Md.Parser.Default.parse() |> generate(options)
+    do: input |> DefaultParser.parse() |> generate(options)
 
   def generate(%State{ast: ast}, options),
     do: XmlBuilder.generate(ast, options)

@@ -1,5 +1,6 @@
 defmodule Md.Parser.Default do
   @moduledoc """
+  Default skeleton parser implementation.
   """
   @behaviour Md.Parser
 
@@ -9,13 +10,17 @@ defmodule Md.Parser.Default do
     fixes: %{
       img: :src
     },
+    custom: [
+      # {md, {handler, properties}}
+    ],
     flush: [
       {"---", %{tag: :hr, rewind: true}},
       {"  \n", %{tag: :br}},
       {"  \n", %{tag: :br}}
     ],
     magnet: [
-      {"¡", %{tag: :abbr}}
+      {"http://", %{tag: :a, attribute: :href}},
+      {"https://", %{tag: :a, attribute: :href}}
     ],
     block: [
       {"```", %{tag: [:pre, :code], mode: :raw}}
@@ -138,6 +143,23 @@ defmodule Md.Parser.Default do
 
     do_parse(rest, state)
   end
+
+  Enum.each(@syntax[:custom], fn
+    {md, {handler, properties}} when is_atom(handler) or is_function(handler, 2) ->
+      rewind = Map.get(properties, :rewind, false)
+
+      defp do_parse(<<unquote(md), rest::binary>>, state()) when mode != :raw do
+        state =
+          unquote(rewind)
+          |> if(do: rewind_state(state), else: state)
+          |> listener({:custom, {unquote(md), unquote(handler)}, nil})
+
+        case handler do
+          module when is_atom(module) -> module.do_parse(rest, state)
+          fun when is_function(fun, 2) -> fun.(rest, state)
+        end
+      end
+  end)
 
   Enum.each(@syntax[:flush], fn {md, properties} ->
     rewind = Map.get(properties, :rewind, false)
