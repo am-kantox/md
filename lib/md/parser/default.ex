@@ -248,7 +248,8 @@ defmodule Md.Parser.Default do
     do_parse(rest, state)
   end
 
-  defp do_parse(<<?\s, rest::binary>>, %State{mode: [{:nested, _, _} | _]} = state) do
+  defp do_parse(<<?\s, rest::binary>>, %State{mode: [{mode, _, _} | _]} = state)
+       when mode in [:nested, :inner] do
     do_parse(rest, state)
   end
 
@@ -454,7 +455,11 @@ defmodule Md.Parser.Default do
 
           state =
             state
-            |> rewind_state(until: unquote(outer), count: Enum.count(skipped), inclusive: false)
+            |> rewind_state(
+              until: unquote(outer),
+              count: Enum.count(skipped),
+              inclusive: true
+            )
             |> listener({:tag, {unquote(md), unquote(tag)}, true})
             |> replace_mode({:inner, unquote(tag), pos})
             |> push_path({unquote(tag), unquote(attrs), []})
@@ -534,27 +539,18 @@ defmodule Md.Parser.Default do
   defp push_char(state, x) when is_integer(x),
     do: push_char(state, <<x::utf8>>)
 
+  defp push_char(empty(_), <<?\n>>), do: state
+  defp push_char(empty({:linefeed, _}), <<?\s>>), do: state
+
+  defp push_char(empty(:md), x),
+    do: %State{state | path: [{get_in(syntax(), [:settings, :span]) || :span, nil, [x]}]}
+
+  defp push_char(empty({:linefeed, _}), x),
+    do: %State{state | path: [{get_in(syntax(), [:settings, :outer]) || :article, nil, [x]}]}
+
   defp push_char(state(), x) do
     path =
       case {x, mode, state.path} do
-        {<<?\s>>, {:linefeed, _}, []} ->
-          []
-
-        {<<?\s>>, :md, []} ->
-          []
-
-        {<<?\n>>, _, []} ->
-          []
-
-        {_, {:linefeed, _}, []} ->
-          [{get_in(syntax(), [:settings, :outer]) || :article, nil, [x]}]
-
-        {_, :md, []} ->
-          [{get_in(syntax(), [:settings, :span]) || :span, nil, [x]}]
-
-        # {_, {:linefeed, _}, path} ->
-        #   [{syntax()[:outer], nil, [x]} | path]
-
         {<<?\n>>, _, [{elem, attrs, branch} | rest]} ->
           [{elem, attrs, [x | branch]} | rest]
 
@@ -619,7 +615,7 @@ defmodule Md.Parser.Default do
     for i <- 1..count, count > 0, reduce: state do
       acc ->
         state =
-          Enum.reduce_while(state.path, acc, fn
+          Enum.reduce_while(acc.path, acc, fn
             {^until, _, _}, acc -> {:halt, acc}
             _, acc -> {:cont, to_ast(acc)}
           end)

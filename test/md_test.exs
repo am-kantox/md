@@ -3,15 +3,64 @@ defmodule MdTest do
   doctest Md
 
   test "leading spaces" do
-    assert Md.parse(" he\\*llo \n  *foo **bar baz \n\n Answer: _42_.") == %Md.Parser.State{
-             mode: [:finished],
+    assert %Md.Parser.State{
              ast: [
                {:p, nil,
                 ["he*llo ", "\n", {:b, nil, ["foo ", {:strong, %{class: "red"}, ["bar baz "]}]}]},
                {:p, nil, ["Answer: ", {:it, nil, ["42"]}, "."]}
-             ],
-             listener: Md.Listener.Debug
-           }
+             ]
+           } = Md.parse(" he\\*llo \n  *foo **bar baz \n\n Answer: _42_.")
+  end
+
+  test "nested" do
+    input = """
+    - 1 | 1
+      - 2 | 1
+      - 2 | 2
+    - 1 | 2
+      - 2 | 3
+    - 1 | 3
+    """
+
+    assert [
+             {:ul, nil,
+              [
+                {:li, nil, ["1 | 1"]},
+                {:ul, nil,
+                 [
+                   {:li, nil, ["2 | 1"]},
+                   {:li, nil, ["2 | 2"]}
+                 ]},
+                {:li, nil, ["1 | 2"]},
+                {:ul, nil, [{:li, nil, ["2 | 3"]}]},
+                {:li, nil, ["1 | 3"]}
+              ]}
+           ] = Md.parse(input).ast
+  end
+
+  test "deeply nested" do
+    input = """
+    - 1 | 1
+      - 2 | 1
+        - 3 | 1
+          - 4 | 1
+      - 2 | 2
+    - 1 | 2
+    """
+
+    assert [
+             {:ul, nil,
+              [
+                {:li, nil, ["1 | 1"]},
+                {:ul, nil,
+                 [
+                   {:li, nil, ["2 | 1"]},
+                   {:ul, nil, [{:li, nil, ["3 | 1"]}, {:ul, nil, [{:li, nil, ["4 | 1"]}]}]},
+                   {:li, nil, ["2 | 2"]}
+                 ]},
+                {:li, nil, ["1 | 2"]}
+              ]}
+           ] = Md.parse(input).ast
   end
 
   test "simple markdown" do
