@@ -101,6 +101,59 @@ defmodule MdTest do
            ] = Md.parse(input).ast
   end
 
+  test "nested paragraph" do
+    input = """
+    > This is a header.
+    >
+    > > This is the 1st line of nested quote.
+    > > This is the 2ns line of nested quote.
+    > This is the quote.
+
+    Here's some example code:
+    """
+
+    assert [
+             {:blockquote, nil,
+              [
+                "This is a header.",
+                "\n",
+                "\n",
+                {:blockquote, nil,
+                 [
+                   "This is the 1st line of nested quote.",
+                   "\n",
+                   "This is the 2ns line of nested quote."
+                 ]},
+                "This is the quote."
+              ]},
+             {:p, nil, ["Here's some example code:"]}
+           ] = Md.parse(input).ast
+  end
+
+  test "markdown in nested paragraph" do
+    input = """
+    > ## This is a header.
+    >
+    > 1.   This is the first list item.
+    > 2.   This is the second list item.
+    >
+    > Here's some example code:
+    """
+
+    assert [
+             {:blockquote, nil,
+              [
+                {:h2, nil, [" This is a header."]},
+                {:ol, nil,
+                 [
+                   {:li, nil, ["This is the first list item."]},
+                   {:li, nil, ["This is the second list item."]}
+                 ]},
+                {:p, nil, ["Here's some example code:"]}
+              ]}
+           ] = Md.parse(input).ast
+  end
+
   test "simple markdown" do
     assert "priv/SIMPLE.md" |> File.read!() |> Md.parse() == %Md.Parser.State{
              mode: [:finished],
