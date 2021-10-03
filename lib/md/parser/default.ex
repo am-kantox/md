@@ -34,6 +34,9 @@ defmodule Md.Parser.Default do
     block: [
       {"```", %{tag: [:pre, :code], mode: :raw, pop: %{code: :class}}}
     ],
+    shift: [
+      {"    ", %{tag: [:div, :pre, :code], mode: :raw}}
+    ],
     pair: [
       {"![",
        %{
@@ -84,6 +87,7 @@ defmodule Md.Parser.Default do
       {"__", %{tag: :em}},
       {"~", %{tag: :s}},
       {"~~", %{tag: :del}},
+      {"``", %{tag: :span, mode: :raw, attributes: %{class: "code-inline"}}},
       {"`", %{tag: :code, mode: :raw, attributes: %{class: "code-inline"}}}
     ]
   ]
@@ -230,6 +234,62 @@ defmodule Md.Parser.Default do
     end
   end)
 
+  Enum.each(@syntax[:shift], fn {md, properties} ->
+    [tag | _] = tags = List.wrap(properties[:tag])
+    mode = properties[:mode]
+    attrs = Macro.escape(properties[:attributes])
+
+    us = Macro.var(:_, %Macro.Env{}.context)
+    closing_match = Enum.reduce(tags, [], &[{:{}, [], [&1, us, us]} | &2])
+
+    defp do_parse(
+           <<unquote(md), rest::binary>>,
+           %State{mode: [{:linefeed, 0} | _], path: [unquote_splicing(closing_match) | _]} = state
+         ) do
+      do_parse(rest, pop_mode(state, {:linefeed, 0}))
+    end
+
+    defp do_parse(
+           input,
+           %State{mode: [{:linefeed, 0} | _], path: [unquote_splicing(closing_match) | _]} = state
+         ) do
+      state =
+        state
+        |> rewind_state(until: unquote(tag), inclusive: true)
+        |> pop_mode([{:linefeed, 0}, unquote(mode)])
+        |> push_mode([{:linefeed, 0}])
+
+      do_parse(input, state)
+    end
+
+    defp do_parse(<<unquote(md), rest::binary>>, empty({:linefeed, 0})) do
+      state =
+        state
+        |> listener({:tag, {unquote(md), unquote(tag)}, true})
+        |> pop_mode([{:linefeed, 0}])
+        |> push_mode(unquote(mode))
+        |> push_path(for tag <- unquote(tags), do: {tag, unquote(attrs), []})
+
+      do_parse(rest, state)
+    end
+
+    defp do_parse(
+           <<?\n, rest::binary>>,
+           %State{mode: [mode | _], path: [unquote_splicing(closing_match) | _]} = state
+         )
+         when mode == unquote(mode) do
+      do_parse(rest, state |> push_char(?\n) |> push_mode({:linefeed, 0}))
+    end
+
+    defp do_parse(
+           <<x::utf8, rest::binary>>,
+           %State{mode: [mode | _], path: [unquote_splicing(closing_match) | _]} = state
+         )
+         when mode == unquote(mode) do
+      do_parse(rest, push_char(state, x))
+    end
+  end)
+
   # → :linefeed
   defp do_parse(<<?\n, rest::binary>>, state()) when mode == :raw do
     do_parse(rest, push_char(state, ?\n))
@@ -277,7 +337,7 @@ defmodule Md.Parser.Default do
   end
 
   Enum.each(@syntax[:pair], fn {md, properties} ->
-    tag = properties[:tag]
+    [tag | _] = tags = List.wrap(properties[:tag])
     closing = properties[:closing]
     outer = properties[:outer]
     inner_opening = properties[:inner_opening]
@@ -291,7 +351,7 @@ defmodule Md.Parser.Default do
         |> listener({:tag, {unquote(md), unquote(tag)}, unquote(inner_tag)})
         # [AM] |> push_mode(:md)
         |> replace_mode(:md)
-        |> push_path({unquote(tag), unquote(attrs), []})
+        |> push_path(for tag <- unquote(tags), do: {tag, unquote(attrs), []})
 
       do_parse(rest, state)
     end
@@ -348,6 +408,7 @@ defmodule Md.Parser.Default do
 
   Enum.each(@syntax[:paragraph], fn {md, properties} ->
     [tag | _] = tags = List.wrap(properties[:tag])
+    mode = Macro.escape(Map.get(properties, :mode, {:nested, tag, 1}))
     attrs = Macro.escape(properties[:attributes])
 
     us = Macro.var(:_, %Macro.Env{}.context)
@@ -357,7 +418,7 @@ defmodule Md.Parser.Default do
       state =
         state
         |> listener({:tag, {unquote(md), unquote(tag)}, true})
-        |> replace_mode({:nested, unquote(tag), 1})
+        |> replace_mode(unquote(mode))
         |> push_path(for tag <- unquote(tags), do: {tag, unquote(attrs), []})
 
       do_parse(rest, state)
@@ -438,7 +499,7 @@ defmodule Md.Parser.Default do
   end)
 
   Enum.each(@syntax[:list], fn {md, properties} ->
-    tag = properties[:tag]
+    [tag | _] = tags = List.wrap(properties[:tag])
     outer = Map.get(properties, :outer, :ul)
     attrs = Macro.escape(properties[:attributes])
 
@@ -448,7 +509,7 @@ defmodule Md.Parser.Default do
         |> listener({:tag, {unquote(md), unquote(outer)}, true})
         |> listener({:tag, {unquote(md), unquote(tag)}, true})
         |> replace_mode({:inner, {unquote(tag), unquote(outer)}, pos})
-        |> push_path([{unquote(outer), unquote(attrs), []}, {unquote(tag), unquote(attrs), []}])
+        |> push_path(for tag <- [unquote(outer) | unquote(tags)], do: {tag, unquote(attrs), []})
 
       do_parse(rest, %State{state | bag: %{state.bag | indent: [pos]}})
     end
@@ -530,13 +591,16 @@ defmodule Md.Parser.Default do
   end)
 
   Enum.each(@syntax[:brace], fn {md, properties} ->
-    tag = properties[:tag]
+    [tag | _] = tags = List.wrap(properties[:tag])
     mode = properties[:mode]
     attrs = Macro.escape(properties[:attributes])
 
+    us = Macro.var(:_, %Macro.Env{}.context)
+    closing_match = Enum.reduce(tags, [], &[{:{}, [], [&1, us, us]} | &2])
+
     defp do_parse(
            <<unquote(md), rest::binary>>,
-           %State{mode: [mode | _], path: [{unquote(tag), _, _} | _]} = state
+           %State{mode: [mode | _], path: [unquote_splicing(closing_match) | _]} = state
          )
          when mode == unquote(mode) or mode != :raw do
       state =
@@ -552,7 +616,7 @@ defmodule Md.Parser.Default do
         state
         |> listener({:tag, {unquote(md), unquote(tag)}, true})
         |> push_mode(unquote(mode))
-        |> push_path({unquote(tag), unquote(attrs), []})
+        |> push_path(for tag <- unquote(tags), do: {tag, unquote(attrs), []})
 
       do_parse(rest, state)
     end

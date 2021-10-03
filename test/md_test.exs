@@ -50,7 +50,29 @@ defmodule MdTest do
              Md.parse(input).ast
   end
 
-  test "nested" do
+  test "codeblock" do
+    input = """
+    foo
+
+        defmodule Foo
+            def bar, do: :baz
+        end
+
+    bar
+    """
+
+    assert [
+             {:p, nil, ["foo"]},
+             {:div, nil,
+              [
+                {:pre, nil,
+                 [{:code, nil, ["defmodule Foo", "\n", "    def bar, do: :baz", "\n", "end"]}]}
+              ]},
+             {:p, nil, ["bar"]}
+           ] = Md.parse(input).ast
+  end
+
+  test "nested list" do
     input = """
     - 1 | 1
       - 2 | 1
@@ -76,7 +98,7 @@ defmodule MdTest do
            ] = Md.parse(input).ast
   end
 
-  test "deeply nested" do
+  test "deeply nested list" do
     input = """
     - 1 | 1
       - 2 | 1
