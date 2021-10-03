@@ -7,7 +7,7 @@ defmodule MdTest do
              mode: [:finished],
              ast: [
                {:p, nil,
-                ["he*llo  ", {:b, nil, ["foo ", {:strong, %{class: "red"}, ["bar baz  "]}]}]},
+                ["he*llo ", "\n", {:b, nil, ["foo ", {:strong, %{class: "red"}, ["bar baz "]}]}]},
                {:p, nil, ["Answer: ", {:it, nil, ["42"]}, "."]}
              ],
              listener: Md.Listener.Debug
@@ -18,48 +18,51 @@ defmodule MdTest do
     assert "priv/SIMPLE.md" |> File.read!() |> Md.parse() == %Md.Parser.State{
              mode: [:finished],
              ast: [
-               {:h1, nil, ["Header 1 "]},
-               {:h2, nil, ["Header 2 "]},
+               {:h1, nil, ["Header 1"]},
+               {:h2, nil, ["Header 2"]},
                {:p, nil,
                 [
                   "he*llo  ",
-                  {:b, nil, ["foo ", {:strong, %{class: "red"}, ["bar"]}, "  baz"]},
-                  " 42 "
+                  {:b, nil, ["foo ", {:strong, %{class: "red"}, ["bar"]}, "\n", "baz"]},
+                  " 42"
                 ]},
-               {:blockquote, nil, ["Hi, ", {:b, nil, ["there "]}, "olala "]},
+               {:blockquote, nil, ["Hi, ", {:b, nil, ["there"]}, "olala"]},
                {:blockquote, nil,
                 [
                   "Hi, ",
                   {:figure, nil,
                    [{:figcaption, nil, ["image"]}, {:img, %{src: "https://image.com"}, []}]},
-                  " ",
+                  "\n",
                   {:blockquote, nil,
                    [
                      "2nd ",
                      {:b, nil, ["1st"]},
-                     " line 2nd ",
+                     " line",
+                     "\n",
+                     "2nd ",
                      {:code, %{class: "code-inline"}, ["2nd"]},
-                     " line "
+                     " line"
                    ]},
-                  "boom "
+                  "boom"
                 ]},
-               {
-                 :ul,
-                 nil,
-                 [
-                   {:li, nil, ["1 | ", {:b, nil, ["foo"]}, " foo "]},
-                   {:li, nil, ["1 | bar ", {:it, nil, ["bar"]}, " "]},
-                   {:ul, nil,
-                    [
-                      {:li, nil, ["2 | baz "]},
-                      {:li, nil, ["2 | bzz "]},
-                      {:ul, nil, [{:li, nil, ["3 | rgf "]}]}
-                    ]},
-                   {:li, nil, ["1 | zzz "]}
-                 ]
-               },
-               {:p, nil, ["Hi ", {:a, %{href: "https://anchor.com"}, ["anchor"]}, " 1! "]},
-               {:pre, nil, [{:code, nil, ["elixir\ndef foo, do: :ok\n\ndef bar, do: :error\n"]}]},
+               {:ul, nil,
+                [
+                  {:li, nil, ["1 | ", {:b, nil, ["foo"]}, " foo"]},
+                  {:li, nil, ["1 | bar ", {:it, nil, ["bar"]}]},
+                  {:ul, nil,
+                   [
+                     {:li, nil, ["2 | baz"]},
+                     {:li, nil, ["2 | bzz"]},
+                     {:ul, nil, [{:li, nil, ["3 | rgf"]}]}
+                   ]},
+                  {:li, nil, ["1 | zzz"]}
+                ]},
+               {:p, nil, ["Hi ", {:a, %{href: "https://anchor.com"}, ["anchor"]}, " 1!"]},
+               {:pre, nil,
+                [
+                  {:code, nil,
+                   ["elixir", "\n", "def foo, do: :ok", "\n", "\n", "def bar, do: :error"]}
+                ]},
                {:ul, nil,
                 [
                   {:li, nil,
@@ -67,10 +70,9 @@ defmodule MdTest do
                      "Hi ",
                      {:a, %{href: "https://anchor.com"}, ["anchor"]},
                      " ",
-                     {:b, nil, ["bar"]},
-                     " "
+                     {:b, nil, ["bar"]}
                    ]},
-                  {:li, nil, ["baz "]}
+                  {:li, nil, ["baz"]}
                 ]}
              ],
              listener: Md.Listener.Debug

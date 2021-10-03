@@ -5,8 +5,11 @@ defmodule Md.Parser.Default do
   @behaviour Md.Parser
 
   @default_syntax [
-    outer: :p,
-    span: :span,
+    settings: %{
+      outer: :p,
+      span: :span,
+      empty_tags: ~w|img hr br|a
+    },
     fixes: %{
       img: :src
     },
@@ -215,10 +218,14 @@ defmodule Md.Parser.Default do
     state =
       state
       |> listener(:linefeed)
-      |> push_char(?\s)
+      |> push_char(?\n)
       |> set_mode({:linefeed, 0})
 
     do_parse(rest, state)
+  end
+
+  defp do_parse(<<?\n, rest::binary>>, state()) when mode == :raw do
+    do_parse(rest, push_char(state, ?\n))
   end
 
   defp do_parse(<<?\n, rest::binary>>, state_linefeed()) do
@@ -533,19 +540,25 @@ defmodule Md.Parser.Default do
         {<<?\s>>, {:linefeed, _}, []} ->
           []
 
-        {x, {:linefeed, _}, []} ->
-          [{syntax()[:outer], nil, [x]}]
-
         {<<?\s>>, :md, []} ->
           []
 
+        {<<?\n>>, _, []} ->
+          []
+
+        {_, {:linefeed, _}, []} ->
+          [{get_in(syntax(), [:settings, :outer]) || :article, nil, [x]}]
+
         {_, :md, []} ->
-          [{syntax()[:span], nil, [x]}]
+          [{get_in(syntax(), [:settings, :span]) || :span, nil, [x]}]
 
         # {_, {:linefeed, _}, path} ->
         #   [{syntax()[:outer], nil, [x]} | path]
 
-        {_, _, [{elem, attrs, [txt | branch]} | rest]} when is_binary(txt) ->
+        {<<?\n>>, _, [{elem, attrs, branch} | rest]} ->
+          [{elem, attrs, [x | branch]} | rest]
+
+        {_, _, [{elem, attrs, [txt | branch]} | rest]} when is_binary(txt) and txt != <<?\n>> ->
           [{elem, attrs, [txt <> x | branch]} | rest]
 
         {_, _, [{elem, attrs, branch} | rest]} ->
@@ -626,6 +639,10 @@ defmodule Md.Parser.Default do
   @spec to_ast(L.state()) :: L.state()
   defp to_ast(%State{path: []} = state), do: state
 
+  @empty_tags @syntax |> Keyword.get(:settings, []) |> Map.get(:empty_tags, [])
+  defp to_ast(%State{path: [{tag, nil, []} | rest]} = state) when tag not in @empty_tags,
+    do: to_ast(%State{state | path: rest})
+
   defp to_ast(%State{path: [{tag, _, _} = last], ast: ast} = state) do
     state = %State{state | path: [], ast: [reverse(last) | ast]}
     listener(state, {:tag, tag, false})
@@ -638,7 +655,12 @@ defmodule Md.Parser.Default do
 
   @spec reverse(L.trace()) :: L.trace()
   defp reverse({elem, attrs, branch}) when is_list(branch),
-    do: {elem, attrs, Enum.reverse(branch)}
+    do: {elem, attrs, trim(branch)}
 
   defp reverse(any), do: any
+
+  @spec trim([L.branch()]) :: [L.branch()]
+  defp trim([<<?\n>> | rest]), do: trim(rest)
+  defp trim([<<?\s>> | rest]), do: trim(rest)
+  defp trim(branch), do: Enum.reverse(branch)
 end

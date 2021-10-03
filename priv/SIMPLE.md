@@ -2,7 +2,7 @@
 
 ## Header 2
 
-   he\*llo  *foo **bar** 
+   he\*llo  *foo **bar**
 baz* 42
 
 > Hi, *there
