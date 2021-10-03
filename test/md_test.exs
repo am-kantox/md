@@ -4,12 +4,50 @@ defmodule MdTest do
 
   test "leading spaces" do
     assert %Md.Parser.State{
+             mode: [:finished],
              ast: [
                {:p, nil,
-                ["he*llo ", "\n", {:b, nil, ["foo ", {:strong, %{class: "red"}, ["bar baz "]}]}]},
+                [
+                  "he*llo ",
+                  "\n",
+                  {:b, nil, ["foo ", {:strong, %{class: "red"}, ["bar baz "]}]}
+                ]},
                {:p, nil, ["Answer: ", {:it, nil, ["42"]}, "."]}
              ]
-           } = Md.parse(" he\\*llo \n  *foo **bar baz \n\n Answer: _42_.")
+           } = Md.parse("   he\\*llo \n  *foo **bar baz \n\n Answer: _42_.")
+  end
+
+  test "substitutes" do
+    assert [{:p, nil, ["foo &lt;br> bar"]}] == Md.parse("foo <br> bar").ast
+  end
+
+  test "flush" do
+    assert [{:p, nil, ["foo "]}, {:hr, nil, []}, {:p, nil, ["bar"]}] ==
+             Md.parse("foo --- bar").ast
+
+    assert [{:p, nil, ["foo", {:br, nil, []}, "bar"]}] == Md.parse("foo  \nbar").ast
+  end
+
+  test "block" do
+    input = """
+    foo
+
+    ```elixir
+    def foo, do: :ok
+
+    def bar, do: :error
+    ```
+    """
+
+    assert [
+             {:p, nil, ["foo"]},
+             {:pre, nil,
+              [
+                {:code, %{class: "elixir"},
+                 ["def foo, do: :ok", "\n", "\n", "def bar, do: :error"]}
+              ]}
+           ] ==
+             Md.parse(input).ast
   end
 
   test "nested" do
@@ -109,8 +147,8 @@ defmodule MdTest do
                {:p, nil, ["Hi ", {:a, %{href: "https://anchor.com"}, ["anchor"]}, " 1!"]},
                {:pre, nil,
                 [
-                  {:code, nil,
-                   ["elixir", "\n", "def foo, do: :ok", "\n", "\n", "def bar, do: :error"]}
+                  {:code, %{class: "elixir"},
+                   ["def foo, do: :ok", "\n", "\n", "def bar, do: :error"]}
                 ]},
                {:ul, nil,
                 [

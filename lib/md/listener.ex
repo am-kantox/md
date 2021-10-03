@@ -24,11 +24,12 @@ defmodule Md.Listener do
           | :break
           | :linefeed
           | :whitespace
-          | :finalize
-          | :end
+          | :custom
           | {:tag, {binary(), element()}, atom()}
           | {:esc, binary()}
           | {:char, binary()}
+          | :finalize
+          | :end
 
   @type state :: %{
           __struct__: Md.Parser.State,

@@ -4,6 +4,8 @@ defmodule Md.Parser.Default do
   """
   @behaviour Md.Parser
 
+  @ol_max Application.compile_env(:md, :ol_max, 10)
+
   @default_syntax [
     settings: %{
       outer: :p,
@@ -16,6 +18,10 @@ defmodule Md.Parser.Default do
     custom: [
       # {md, {handler, properties}}
     ],
+    substitutes: [
+      {"<", %{text: "&lt;"}},
+      {"&", %{text: "&amp;"}}
+    ],
     flush: [
       {"---", %{tag: :hr, rewind: true}},
       {"  \n", %{tag: :br}},
@@ -26,7 +32,7 @@ defmodule Md.Parser.Default do
       {"https://", %{tag: :a, attribute: :href}}
     ],
     block: [
-      {"```", %{tag: [:pre, :code], mode: :raw}}
+      {"```", %{tag: [:pre, :code], mode: :raw, pop: %{code: :class}}}
     ],
     pair: [
       {"![",
@@ -70,7 +76,7 @@ defmodule Md.Parser.Default do
         {"- ", %{tag: :li, outer: :ul}},
         {"* ", %{tag: :li, outer: :ul}},
         {"+ ", %{tag: :li, outer: :ul}}
-      ] ++ Enum.map(0..100, &{"#{&1}. ", %{tag: :li, outer: :ol}}),
+      ] ++ Enum.map(0..@ol_max, &{"#{&1}. ", %{tag: :li, outer: :ol}}),
     brace: [
       {"*", %{tag: :b}},
       {"_", %{tag: :it}},
@@ -164,6 +170,15 @@ defmodule Md.Parser.Default do
       end
   end)
 
+  Enum.each(@syntax[:substitutes], fn {md, properties} ->
+    text = Map.get(properties, :text, "")
+
+    defp do_parse(<<unquote(md), rest::binary>>, state()) do
+      state = for <<c <- unquote(text)>>, reduce: state, do: (acc -> push_char(acc, c))
+      do_parse(rest, state)
+    end
+  end)
+
   Enum.each(@syntax[:flush], fn {md, properties} ->
     rewind = Map.get(properties, :rewind, false)
     [tag | _] = tags = List.wrap(properties[:tag])
@@ -183,9 +198,10 @@ defmodule Md.Parser.Default do
   end)
 
   Enum.each(@syntax[:block], fn {md, properties} ->
-    [tag | _] = tags = properties[:tag]
+    [tag | _] = tags = List.wrap(properties[:tag])
     mode = properties[:mode]
     attrs = Macro.escape(properties[:attributes])
+    pop = Macro.escape(properties[:pop])
 
     us = Macro.var(:_, %Macro.Env{}.context)
     closing_match = Enum.reduce(tags, [], &[{:{}, [], [&1, us, us]} | &2])
@@ -206,7 +222,7 @@ defmodule Md.Parser.Default do
          ) do
       state =
         state
-        |> rewind_state()
+        |> rewind_state(pop: unquote(pop))
         |> set_mode(:md)
 
       do_parse(rest, state)
@@ -605,9 +621,13 @@ defmodule Md.Parser.Default do
     do: %State{state | path: [element | path]}
 
   @spec rewind_state(L.state(), [
-          {:until, L.element()} | {:count, pos_integer()} | {:inclusive, boolean()}
+          {:until, L.element()}
+          | {:count, pos_integer()}
+          | {:inclusive, boolean()}
+          | {:pop, %{required(atom()) => atom()}}
         ]) :: L.state()
   defp rewind_state(state, params \\ []) do
+    pop = Keyword.get(params, :pop, %{})
     until = Keyword.get(params, :until, nil)
     count = Keyword.get(params, :count, 1)
     inclusive = Keyword.get(params, :inclusive, false)
@@ -617,10 +637,10 @@ defmodule Md.Parser.Default do
         state =
           Enum.reduce_while(acc.path, acc, fn
             {^until, _, _}, acc -> {:halt, acc}
-            _, acc -> {:cont, to_ast(acc)}
+            _, acc -> {:cont, to_ast(acc, pop)}
           end)
 
-        if i < count or inclusive, do: to_ast(state), else: state
+        if i < count or inclusive, do: to_ast(state, pop), else: state
     end
   end
 
@@ -632,31 +652,55 @@ defmodule Md.Parser.Default do
 
   defp fix_element(element), do: element
 
-  @spec to_ast(L.state()) :: L.state()
-  defp to_ast(%State{path: []} = state), do: state
+  @spec update_attrs(L.branch(), %{required(atom()) => atom()}) :: L.branch()
+  defp update_attrs({_, _, []} = tag, _), do: tag
+
+  defp update_attrs({tag, attrs, [value | rest]} = full_tag, pop) do
+    case pop do
+      %{^tag => attr} -> {tag, Map.put(attrs || %{}, attr, value), rest}
+      _ -> full_tag
+    end
+  end
+
+  @spec to_ast(L.state(), %{required(atom()) => atom()}) :: L.state()
+  defp to_ast(state, pop \\ %{})
+  defp to_ast(%State{path: []} = state, _), do: state
 
   @empty_tags @syntax |> Keyword.get(:settings, []) |> Map.get(:empty_tags, [])
-  defp to_ast(%State{path: [{tag, nil, []} | rest]} = state) when tag not in @empty_tags,
+  defp to_ast(%State{path: [{tag, _, []} | rest]} = state, _) when tag not in @empty_tags,
     do: to_ast(%State{state | path: rest})
 
-  defp to_ast(%State{path: [{tag, _, _} = last], ast: ast} = state) do
-    state = %State{state | path: [], ast: [reverse(last) | ast]}
+  defp to_ast(%State{path: [{tag, _, _} = last], ast: ast} = state, pop) do
+    last =
+      last
+      |> reverse()
+      |> update_attrs(pop)
+      |> trim(false)
+
+    state = %State{state | path: [], ast: [last | ast]}
     listener(state, {:tag, tag, false})
   end
 
-  defp to_ast(%State{path: [{tag, _, _} = last, {elem, attrs, branch} | rest]} = state) do
-    state = %State{state | path: [{elem, attrs, [reverse(last) | branch]} | rest]}
+  defp to_ast(%State{path: [{tag, _, _} = last, {elem, attrs, branch} | rest]} = state, pop) do
+    last =
+      last
+      |> reverse()
+      |> update_attrs(pop)
+      |> trim(false)
+
+    state = %State{state | path: [{elem, attrs, [last | branch]} | rest]}
     listener(state, {:tag, tag, false})
   end
 
   @spec reverse(L.trace()) :: L.trace()
-  defp reverse({elem, attrs, branch}) when is_list(branch),
-    do: {elem, attrs, trim(branch)}
-
+  defp reverse({_, _, branch} = trace) when is_list(branch), do: trim(trace, true)
   defp reverse(any), do: any
 
-  @spec trim([L.branch()]) :: [L.branch()]
-  defp trim([<<?\n>> | rest]), do: trim(rest)
-  defp trim([<<?\s>> | rest]), do: trim(rest)
-  defp trim(branch), do: Enum.reverse(branch)
+  @spec trim(L.trace(), boolean()) :: L.trace()
+  defp trim(trace, reverse?)
+  defp trim({elem, attrs, [<<?\n>> | rest]}, reverse?), do: trim({elem, attrs, rest}, reverse?)
+  defp trim({elem, attrs, [<<?\s>> | rest]}, reverse?), do: trim({elem, attrs, rest}, reverse?)
+
+  defp trim({elem, attrs, branch}, reverse?),
+    do: if(reverse?, do: {elem, attrs, Enum.reverse(branch)}, else: {elem, attrs, branch})
 end
