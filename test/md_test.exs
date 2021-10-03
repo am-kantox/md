@@ -143,13 +143,15 @@ defmodule MdTest do
     assert [
              {:blockquote, nil,
               [
-                {:h2, nil, [" This is a header."]},
+                {:h2, nil, ["This is a header."]},
+                "\n",
                 {:ol, nil,
                  [
                    {:li, nil, ["This is the first list item."]},
                    {:li, nil, ["This is the second list item."]}
                  ]},
-                {:p, nil, ["Here's some example code:"]}
+                "\n",
+                "Here's some example code:"
               ]}
            ] = Md.parse(input).ast
   end

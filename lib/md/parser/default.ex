@@ -223,7 +223,8 @@ defmodule Md.Parser.Default do
       state =
         state
         |> rewind_state(pop: unquote(pop))
-        |> set_mode(:md)
+        |> pop_mode(unquote(mode))
+        |> push_mode(:md)
 
       do_parse(rest, state)
     end
@@ -245,6 +246,12 @@ defmodule Md.Parser.Default do
   end
 
   defp do_parse(<<?\n, rest::binary>>, state()) do
+    state =
+      case state.mode do
+        [{:inner, {_, outer}, _} | _] -> rewind_state(state, until: outer, inclusive: true)
+        _ -> state
+      end
+
     state =
       state
       |> listener(:linefeed)
@@ -353,7 +360,6 @@ defmodule Md.Parser.Default do
         |> replace_mode({:nested, unquote(tag), 1})
         |> push_path(for tag <- unquote(tags), do: {tag, unquote(attrs), []})
 
-      IO.inspect(state, label: "1")
       do_parse(rest, state)
     end
 
@@ -372,17 +378,14 @@ defmodule Md.Parser.Default do
             |> pop_mode([{:linefeed, pos}, {:nested, unquote(tag), 1}, :md])
             |> push_mode({:nested, unquote(tag), 1})
 
-          IO.inspect(state, label: "2.1")
           do_parse(rest, state)
 
         :md ->
           state = push_char(state, unquote(md))
-          IO.inspect(state, label: "2.2")
           do_parse(rest, state)
 
         {:nested, unquote(tag), level} when level < current_level ->
           state = replace_mode(state, {:nested, unquote(tag), level + 1})
-          IO.inspect(state, label: "2.3")
           do_parse(rest, state)
 
         {:nested, unquote(tag), level} ->
@@ -392,25 +395,19 @@ defmodule Md.Parser.Default do
             |> replace_mode({:nested, unquote(tag), level + 1})
             |> push_path(for tag <- unquote(tags), do: {tag, unquote(attrs), []})
 
-          IO.inspect(state, label: "2.4")
           do_parse(rest, state)
       end
     end
 
     defp do_parse(
            <<unquote(md), rest::binary>>,
-           %State{mode: [{:nested, _tag, _level} | _]} = state
+           %State{mode: [{:nested, _, _} | _]} = state
          ) do
-      IO.inspect(state, label: "2.5.1")
-
       state =
         state
         |> listener({:tag, {unquote(md), unquote(tag)}, true})
-        # [AM] |> push_mode({:nested, tag, level + 1})
-        |> replace_mode(:md)
         |> push_path(for tag <- unquote(tags), do: {tag, unquote(attrs), []})
 
-      IO.inspect(state, label: "2.5.2")
       do_parse(rest, state)
     end
 
@@ -418,22 +415,25 @@ defmodule Md.Parser.Default do
            <<unquote(md), rest::binary>>,
            %State{mode: [{:inner, _, _} | _]} = state
          ) do
-      IO.inspect(state, label: "2.6")
-
       do_parse(rest, state)
     end
 
-    defp do_parse(<<unquote(md), _::binary>> = input, state_linefeed()) do
-      rewind_until =
-        case state.mode do
-          %State{mode: [{:linefeed, ^pos}, :md, {:inner, tag, _} | _]} -> tag
-          %State{mode: [{:linefeed, ^pos}, :md, {:nested, tag, _} | _]} -> tag
-          _ -> unquote(tag)
-        end
+    defp do_parse(<<unquote(md), rest::binary>> = input, state_linefeed()) do
+      state = pop_mode(state, [{:linefeed, pos}, :md])
 
-      state = rewind_state(state, until: rewind_until)
-      IO.inspect({rewind_until, state}, label: "2.7")
-      do_parse(input, state)
+      case state do
+        %State{mode: [{:inner, {_, _}, _} | _]} ->
+          state = %State{state | bag: %{state.bag | indent: [pos | state.bag.indent]}}
+          do_parse(rest, state)
+
+        %State{mode: [{:nested, tag, _} | _]} ->
+          state = rewind_state(state, until: tag, inclusive: false)
+          do_parse(rest, state)
+
+        _ ->
+          state = rewind_state(state, until: unquote(tag), inclusive: false)
+          do_parse(input, state)
+      end
     end
   end)
 
@@ -442,33 +442,15 @@ defmodule Md.Parser.Default do
     outer = Map.get(properties, :outer, :ul)
     attrs = Macro.escape(properties[:attributes])
 
-    defp do_parse(
-           <<unquote(md), rest::binary>>,
-           %State{path: [], mode: [{:linefeed, pos} | _]} = state
-         ) do
+    defp do_parse(<<unquote(md), rest::binary>>, empty({:linefeed, pos})) do
       state =
         state
         |> listener({:tag, {unquote(md), unquote(outer)}, true})
         |> listener({:tag, {unquote(md), unquote(tag)}, true})
-        |> replace_mode({:inner, unquote(tag), pos})
+        |> replace_mode({:inner, {unquote(tag), unquote(outer)}, pos})
         |> push_path([{unquote(outer), unquote(attrs), []}, {unquote(tag), unquote(attrs), []}])
 
       do_parse(rest, %State{state | bag: %{state.bag | indent: [pos]}})
-    end
-
-    defp do_parse(
-           <<unquote(md), rest::binary>>,
-           %State{mode: [{:nested, _tag, _level} | _], bag: %{indent: indent}} = state
-         ) do
-      IO.inspect(state, label: "555")
-
-      state =
-        state
-        |> listener({:tag, {unquote(md), unquote(tag)}, true})
-        |> push_mode({:inner, unquote(tag), indent})
-        |> push_path([{unquote(outer), unquote(attrs), []}, {unquote(tag), unquote(attrs), []}])
-
-      do_parse(rest, state)
     end
 
     defp do_parse(
@@ -485,27 +467,25 @@ defmodule Md.Parser.Default do
           state =
             state
             |> rewind_state(until: unquote(tag))
-            |> replace_mode({:inner, unquote(tag), pos})
+            |> replace_mode({:inner, {unquote(tag), unquote(outer)}, pos})
 
           do_parse(input, state)
 
-        {:inner, unquote(tag), ^indent} ->
+        {:inner, {unquote(tag), unquote(outer)}, ^indent} ->
           state =
             state
             |> rewind_state(until: unquote(outer))
             |> listener({:tag, {unquote(md), unquote(tag)}, true})
-            |> replace_mode({:inner, unquote(tag), indent})
             |> push_path({unquote(tag), unquote(attrs), []})
 
           do_parse(rest, state)
 
-        {:inner, unquote(tag), pos} when pos > indent ->
+        {:inner, {unquote(tag), unquote(outer)}, pos} when pos > indent ->
           state =
             state
             |> rewind_state(until: unquote(outer))
             |> listener({:tag, {unquote(md), unquote(outer)}, true})
             |> listener({:tag, {unquote(md), unquote(tag)}, true})
-            |> replace_mode({:inner, unquote(tag), pos})
             |> push_path([
               {unquote(outer), unquote(attrs), []},
               {unquote(tag), unquote(attrs), []}
@@ -513,7 +493,7 @@ defmodule Md.Parser.Default do
 
           do_parse(rest, %State{state | bag: %{state.bag | indent: [pos | indents]}})
 
-        {:inner, unquote(tag), pos} when pos < indent ->
+        {:inner, {unquote(tag), unquote(outer)}, pos} when pos < indent ->
           {skipped, indents} = Enum.split_with(indents, &(&1 > pos))
 
           state =
@@ -524,11 +504,23 @@ defmodule Md.Parser.Default do
               inclusive: true
             )
             |> listener({:tag, {unquote(md), unquote(tag)}, true})
-            |> replace_mode({:inner, unquote(tag), pos})
             |> push_path({unquote(tag), unquote(attrs), []})
 
           do_parse(rest, %State{state | bag: %{state.bag | indent: indents}})
       end
+    end
+
+    defp do_parse(
+           <<unquote(md), rest::binary>>,
+           %State{mode: [{:nested, _tag, _level} | _], bag: %{indent: indent}} = state
+         ) do
+      state =
+        state
+        |> listener({:tag, {unquote(md), unquote(tag)}, true})
+        |> push_mode({:inner, {unquote(tag), unquote(outer)}, List.first(indent) || 0})
+        |> push_path([{unquote(outer), unquote(attrs), []}, {unquote(tag), unquote(attrs), []}])
+
+      do_parse(rest, state)
     end
 
     defp do_parse(<<unquote(md), _::binary>> = input, state_linefeed()) do
@@ -582,7 +574,8 @@ defmodule Md.Parser.Default do
           state
       end
       |> push_char(x)
-      |> replace_mode(if mode in [:raw, :md], do: mode, else: :md)
+
+    state = if mode in [:raw, :md], do: state, else: state |> pop_mode([:md]) |> push_mode(:md)
 
     do_parse(rest, state)
   end
@@ -605,11 +598,11 @@ defmodule Md.Parser.Default do
   defp push_char(empty(_), <<?\n>>), do: state
   defp push_char(empty({:linefeed, _}), <<?\s>>), do: state
 
-  defp push_char(empty(:md), x),
-    do: %State{state | path: [{get_in(syntax(), [:settings, :span]) || :span, nil, [x]}]}
-
   defp push_char(empty({:linefeed, _}), x),
     do: %State{state | path: [{get_in(syntax(), [:settings, :outer]) || :article, nil, [x]}]}
+
+  defp push_char(empty(_), x),
+    do: %State{state | path: [{get_in(syntax(), [:settings, :span]) || :span, nil, [x]}]}
 
   defp push_char(state(), x) do
     path =
