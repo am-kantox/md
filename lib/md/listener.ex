@@ -25,9 +25,10 @@ defmodule Md.Listener do
           | :linefeed
           | :whitespace
           | :custom
-          | {:tag, {binary(), element()}, atom()}
+          | {:substitute, {binary(), binary()}}
           | {:esc, binary()}
           | {:char, binary()}
+          | {:tag, {binary(), element()}, atom()}
           | :finalize
           | :end
 
@@ -66,6 +67,11 @@ defmodule Md.Listener do
 
       def handle_esc(state), do: :ok
       def handle_char(state), do: :ok
+      def handle_substitute({_source, _target}, state), do: :ok
+
+      @impl Md.Listener
+      def element({:substitute, source, target}, state),
+        do: handle_substitute({source, target}, state)
 
       @impl Md.Listener
       def element({:tag, element, opening?}, state),

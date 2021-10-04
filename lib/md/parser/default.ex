@@ -5,6 +5,9 @@ defmodule Md.Parser.Default do
 
   import Md.Utils
 
+  alias Md.Listener, as: L
+  alias Md.Parser.State
+
   @behaviour Md.Parser
 
   @ol_max Application.compile_env(:md, :ol_max, 10)
@@ -24,6 +27,9 @@ defmodule Md.Parser.Default do
     substitutes: [
       {"<", %{text: "&lt;"}},
       {"&", %{text: "&amp;"}}
+    ],
+    escapes: [
+      {"\\", %{}}
     ],
     flush: [
       {"---", %{tag: :hr, rewind: true}},
@@ -95,9 +101,6 @@ defmodule Md.Parser.Default do
     ]
   ]
 
-  alias Md.Listener, as: L
-  alias Md.Parser.State
-
   @syntax :md
           |> Application.compile_env(:syntax, @default_syntax)
           |> Enum.map(fn
@@ -150,15 +153,17 @@ defmodule Md.Parser.Default do
     do_parse(input, state)
   end
 
-  ## escaped symbol
-  defp do_parse(<<?\\, x::utf8, rest::binary>>, state()) when mode != :raw do
-    state =
-      state
-      |> listener({:esc, <<x::utf8>>})
-      |> push_char(x)
+  ## escaped symbols
+  Enum.each(@syntax[:escapes], fn {md, _} ->
+    defp do_parse(unquote(md) <> <<x::utf8, rest::binary>>, state()) when mode != :raw do
+      state =
+        state
+        |> listener({:esc, <<x::utf8>>})
+        |> push_char(x)
 
-    do_parse(rest, state)
-  end
+      do_parse(rest, state)
+    end
+  end)
 
   Enum.each(@syntax[:custom], fn
     {md, {handler, properties}} when is_atom(handler) or is_function(handler, 2) ->
@@ -181,7 +186,11 @@ defmodule Md.Parser.Default do
     text = Map.get(properties, :text, "")
 
     defp do_parse(<<unquote(md), rest::binary>>, state()) do
-      state = for <<c <- unquote(text)>>, reduce: state, do: (acc -> push_char(acc, c))
+      state =
+        state
+        |> listener({:substitute, unquote(md), unquote(text)})
+        |> push_char(unquote(text))
+
       do_parse(rest, state)
     end
   end)
