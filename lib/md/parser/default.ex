@@ -2,6 +2,9 @@ defmodule Md.Parser.Default do
   @moduledoc """
   Default skeleton parser implementation.
   """
+
+  import Md.Utils
+
   @behaviour Md.Parser
 
   @ol_max Application.compile_env(:md, :ol_max, 10)
@@ -207,8 +210,7 @@ defmodule Md.Parser.Default do
     attrs = Macro.escape(properties[:attributes])
     pop = Macro.escape(properties[:pop])
 
-    us = Macro.var(:_, %Macro.Env{}.context)
-    closing_match = Enum.reduce(tags, [], &[{:{}, [], [&1, us, us]} | &2])
+    closing_match = closing_match(tags)
 
     defp do_parse(<<unquote(md), rest::binary>>, state_linefeed()) do
       state =
@@ -239,8 +241,7 @@ defmodule Md.Parser.Default do
     mode = properties[:mode]
     attrs = Macro.escape(properties[:attributes])
 
-    us = Macro.var(:_, %Macro.Env{}.context)
-    closing_match = Enum.reduce(tags, [], &[{:{}, [], [&1, us, us]} | &2])
+    closing_match = closing_match(tags)
 
     defp do_parse(
            <<unquote(md), rest::binary>>,
@@ -411,8 +412,7 @@ defmodule Md.Parser.Default do
     mode = Macro.escape(Map.get(properties, :mode, {:nested, tag, 1}))
     attrs = Macro.escape(properties[:attributes])
 
-    us = Macro.var(:_, %Macro.Env{}.context)
-    closing_match = Enum.reduce(tags, [], &[{:{}, [], [&1, us, us]} | &2])
+    closing_match = closing_match(tags)
 
     defp do_parse(<<unquote(md), rest::binary>>, empty({:linefeed, _pos})) do
       state =
@@ -595,8 +595,7 @@ defmodule Md.Parser.Default do
     mode = properties[:mode]
     attrs = Macro.escape(properties[:attributes])
 
-    us = Macro.var(:_, %Macro.Env{}.context)
-    closing_match = Enum.reduce(tags, [], &[{:{}, [], [&1, us, us]} | &2])
+    closing_match = closing_match(tags)
 
     defp do_parse(
            <<unquote(md), rest::binary>>,
