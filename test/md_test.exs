@@ -238,8 +238,7 @@ defmodule MdTest do
                    ]},
                   {:li, nil, ["baz"]}
                 ]}
-             ],
-             listener: Md.Listener.Debug
+             ]
            }
   end
 end

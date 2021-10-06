@@ -1,7 +1,5 @@
 defmodule Md.Parser.Default do
-  @moduledoc """
-  Default skeleton parser implementation.
-  """
+  @moduledoc false
 
   import Md.Utils
 
@@ -12,7 +10,7 @@ defmodule Md.Parser.Default do
 
   @ol_max Application.compile_env(:md, :ol_max, 10)
 
-  @default_syntax [
+  @default_syntax %{
     settings: %{
       outer: :p,
       span: :span,
@@ -99,10 +97,14 @@ defmodule Md.Parser.Default do
       {"``", %{tag: :span, mode: :raw, attributes: %{class: "code-inline"}}},
       {"`", %{tag: :code, mode: :raw, attributes: %{class: "code-inline"}}}
     ]
-  ]
+  }
 
-  @syntax :md
-          |> Application.compile_env(:syntax, @default_syntax)
+  @custom_syntax Application.compile_env(:md, :syntax, %{})
+  @syntax @default_syntax
+          |> Map.merge(@custom_syntax, fn
+            _k, v1, v2 ->
+              [v2, v1] |> Enum.map(&Map.new/1) |> Enum.reduce(&Map.merge/2) |> Map.to_list()
+          end)
           |> Enum.map(fn
             {k, v} when is_list(v) ->
               {k, Enum.sort_by(v, &(-String.length(elem(&1, 0))))}
@@ -115,9 +117,9 @@ defmodule Md.Parser.Default do
   def syntax, do: @syntax
 
   @impl Md.Parser
-  def parse(input, listener \\ L.Debug) do
+  def parse(input, listener \\ nil) do
     %State{ast: ast, path: []} = state = do_parse(input, %State{listener: listener})
-    %State{state | ast: Enum.reverse(ast)}
+    {"", %State{state | ast: Enum.reverse(ast)}}
   end
 
   # helper macros
@@ -175,10 +177,13 @@ defmodule Md.Parser.Default do
           |> if(do: rewind_state(state), else: state)
           |> listener({:custom, {unquote(md), unquote(handler)}, nil})
 
-        case handler do
-          module when is_atom(module) -> module.do_parse(rest, state)
-          fun when is_function(fun, 2) -> fun.(rest, state)
-        end
+        {continuation, state} =
+          case handler do
+            module when is_atom(module) -> module.do_parse(rest, state)
+            fun when is_function(fun, 2) -> fun.(rest, state)
+          end
+
+        do_parse(continuation, state)
       end
   end)
 
@@ -359,7 +364,6 @@ defmodule Md.Parser.Default do
       state =
         state
         |> listener({:tag, {unquote(md), unquote(tag)}, unquote(inner_tag)})
-        # [AM] |> push_mode(:md)
         |> replace_mode(:md)
         |> push_path(for tag <- unquote(tags), do: {tag, unquote(attrs), []})
 
@@ -694,7 +698,9 @@ defmodule Md.Parser.Default do
 
   ## helpers
   @spec listener(L.state(), L.context()) :: L.state()
-  def listener(state, context) do
+  def listener(%State{listener: nil} = state, _), do: state
+
+  def listener(%State{} = state, context) do
     case state.listener.element(context, state) do
       :ok -> state
       {:update, state} -> state

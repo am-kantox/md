@@ -37,7 +37,7 @@ defmodule Md.Listener do
           path: [trace()],
           mode: [parse_mode()],
           ast: [branch()],
-          listener: module(),
+          listener: nil | module(),
           bag: %{indent: [non_neg_integer()], stock: [branch()]}
         }
 
