@@ -1,6 +1,12 @@
 defmodule Md do
+  @mdoc "README.md" |> File.read!() |> String.split("---\n") |> Enum.at(1)
   @moduledoc """
-  Documentation for `Md`.
+  `Md` is a markup parser allowing fully customized syntax definition and
+  understanding the wide range of [markdown](https://www.markdownguide.org/) out of the box.
+
+  It is stream-aware, extendable, flexible, blazingly fast, with callbacks and more.
+
+  #{@mdoc}
   """
 
   @behaviour Md.Parser

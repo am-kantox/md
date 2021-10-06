@@ -2,7 +2,7 @@ defmodule Md.MixProject do
   use Mix.Project
 
   @app :md
-  @version "0.1.2"
+  @version "0.2.0"
 
   def project do
     [
@@ -79,10 +79,10 @@ defmodule Md.MixProject do
 
   defp docs do
     [
-      main: "README.md",
+      main: "Md",
       source_ref: "v#{@version}",
       canonical: "http://hexdocs.pm/#{@app}",
-      # logo: "stuff/logo-48.png",
+      logo: "stuff/logo-48x48.png",
       source_url: "https://github.com/am-kantox/#{@app}",
       extras: [],
       groups_for_modules: []
