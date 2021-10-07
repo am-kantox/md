@@ -178,6 +178,38 @@ defmodule MdTest do
            ] = Md.parse(input).ast
   end
 
+  test "pairs" do
+    input = """
+    Hi,
+
+    check this [link](https://example.com)!
+    """
+
+    assert [
+             {:p, nil, ["Hi,"]},
+             {:p, nil, ["check this ", {:a, %{href: "https://example.com"}, ["link"]}, "!"]}
+           ] == Md.parse(input).ast
+  end
+
+  test "deferred pairs" do
+    input = """
+    Hi,
+
+    check this [link][1]!
+
+    Another text.
+
+    [1]: https://example.com
+    [2]: https://example.com
+    """
+
+    assert [
+             {:p, nil, ["Hi,"]},
+             {:p, nil, ["check this ", {:a, %{href: " https://example.com"}, ["link"]}, "!"]},
+             {:p, nil, ["Another text.", "\n", "\n", "[2]: https://example.com"]}
+           ] == Md.parse(input).ast
+  end
+
   test "simple markdown" do
     assert "priv/SIMPLE.md" |> File.read!() |> Md.parse() == %Md.Parser.State{
              mode: [:finished],

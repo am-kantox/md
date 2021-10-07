@@ -38,7 +38,10 @@ There are several different syntax patterns recognizable by `Md`. Those are:
 - `shift` — the same as `block`, but the opening marker should precede each line
   and `"\n"` is treated as the closing marker
 - `pair` — the opening marker followed by closing marker, and a subsequent pair
-  of opening and closing, like `![name](#anchor)`
+  of opening and closing, like `![name](#anchor)`; the second element might
+  be an internal shortcut to the deferred disclosure
+- `disclosure` — the disclosure of elements previously declared as `pair` with
+  `deferred` parameter provided
 - `paragraph` — a header, blockquote, or such, followed by a paragraph flow break
 - `list` — a list, like `- one\n-two`
 - `brace` — a most common markdown feature, like text decoration or such (e. g. `**bold**`)
