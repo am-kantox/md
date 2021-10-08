@@ -9,13 +9,13 @@ defmodule Md.Parser.Default do
   @behaviour Md.Parser
 
   @ol_max Application.compile_env(:md, :ol_max, 10)
-  @max_disclosure_length 12
+  @disclosure_range 3..5
 
   @default_syntax %{
     settings: %{
       outer: :p,
       span: :span,
-      max_disclosure_length: @max_disclosure_length,
+      disclosure_range: @disclosure_range,
       empty_tags: ~w|img hr br|a
     },
     fixes: %{
@@ -225,8 +225,14 @@ defmodule Md.Parser.Default do
     end
   end)
 
-  max_disclosure_length =
-    Map.get(@syntax[:settings], :max_disclosure_length, @max_disclosure_length)
+  disclosure_range = Map.get(@syntax[:settings], :disclosure_range, @disclosure_range)
+
+  # disclosure_range =
+  #   if Version.compare(System.version(), "1.12.0") == :lt do
+  #     Range.new(disclosure_range.last, disclosure_range.first)
+  #   else
+  #     Range.new(disclosure_range.last, disclosure_range.first, -1)
+  #   end
 
   Enum.each(@syntax[:disclosure], fn {md, properties} ->
     until = Map.get(properties, :until, :eol)
@@ -237,11 +243,11 @@ defmodule Md.Parser.Default do
         chars when is_binary(chars) -> chars
       end
 
-    Enum.each(1..max_disclosure_length, fn len ->
+    Enum.each(disclosure_range, fn len ->
       defp do_parse(
              <<disclosure::binary-size(unquote(len)), unquote(md), rest::binary>> = input,
              %State{
-               mode: [{:linefeed, _} | _],
+               mode: [{:linefeed, pos} | _],
                bag: %{deferred: deferreds}
              } = state
            ) do
@@ -254,7 +260,14 @@ defmodule Md.Parser.Default do
           do_parse(rest, state)
         else
           <<c::binary-size(1), rest::binary>> = input
-          do_parse(rest, push_char(state, c))
+
+          state =
+            state
+            |> pop_mode([{:linefeed, pos}, :md])
+            |> push_mode({:linefeed, pos})
+            |> push_char(c)
+
+          do_parse(rest, state)
         end
       end
     end)
