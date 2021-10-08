@@ -22,6 +22,9 @@ defmodule Md do
       iex> Md.parse("   foo")
       %Md.Parser.State{ast: [{:p, nil, ["foo"]}], mode: [:finished]}
 
+      iex> Regex.replace(~r/\\s+/, Md.generate("*bold*"), "")
+      "<b>bold</b>"
+
       iex> Md.generate("It’s all *bold* and _italic_!", format: :none)
       "<p>It’s all <b>bold</b> and <it>italic</it>!</p>"
 

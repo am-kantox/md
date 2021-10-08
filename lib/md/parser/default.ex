@@ -18,9 +18,6 @@ defmodule Md.Parser.Default do
       disclosure_range: @disclosure_range,
       empty_tags: ~w|img hr br|a
     },
-    fixes: %{
-      img: :src
-    },
     custom: [
       # {md, {handler, properties}}
     ],
@@ -54,7 +51,7 @@ defmodule Md.Parser.Default do
          inner_opening: "(",
          inner_closing: ")",
          inner_tag: :img,
-         outer: {:tag, :figcaption}
+         outer: {:tag, {:figcaption, :src}}
        }},
       {"?[",
        %{
@@ -480,6 +477,9 @@ defmodule Md.Parser.Default do
          when mode != :raw do
       final_tag =
         case unquote(outer) do
+          {:attribute, attribute} ->
+            {unquote(tag), Map.put(attrs || %{}, attribute, content), outer_content}
+
           {:tag, {tag, attr}} ->
             {unquote(tag), attrs,
              [
@@ -490,12 +490,9 @@ defmodule Md.Parser.Default do
           {:tag, tag} ->
             {unquote(tag), attrs,
              [
-               fix_element({unquote(inner_tag), nil, [content]}),
+               {unquote(inner_tag), nil, [content]},
                {tag, nil, outer_content}
              ]}
-
-          {:attribute, attribute} ->
-            {unquote(tag), Map.put(attrs || %{}, attribute, content), outer_content}
         end
 
       state =
@@ -546,7 +543,7 @@ defmodule Md.Parser.Default do
 
               {unquote(tag), attrs,
                [
-                 fix_element({unquote(inner_tag), attributes, []}),
+                 {unquote(inner_tag), attributes, []},
                  {tag, nil, outer_content}
                ]}
           end
@@ -600,10 +597,6 @@ defmodule Md.Parser.Default do
 
           do_parse(rest, state)
 
-        :md ->
-          state = push_char(state, unquote(md))
-          do_parse(rest, state)
-
         {:nested, unquote(tag), level} when level < current_level ->
           state = replace_mode(state, {:nested, unquote(tag), level + 1})
           do_parse(rest, state)
@@ -631,14 +624,7 @@ defmodule Md.Parser.Default do
       do_parse(rest, state)
     end
 
-    defp do_parse(
-           <<unquote(md), rest::binary>>,
-           %State{mode: [{:inner, _, _} | _]} = state
-         ) do
-      do_parse(rest, state)
-    end
-
-    defp do_parse(<<unquote(md), rest::binary>> = input, state_linefeed()) do
+    defp do_parse(<<unquote(md), rest::binary>>, state_linefeed()) do
       state = pop_mode(state, [{:linefeed, pos}, :md])
 
       case state do
@@ -649,10 +635,6 @@ defmodule Md.Parser.Default do
         %State{mode: [{:nested, tag, _} | _]} ->
           state = rewind_state(state, until: tag, inclusive: false)
           do_parse(rest, state)
-
-        _ ->
-          state = rewind_state(state, until: unquote(tag), inclusive: false)
-          do_parse(input, state)
       end
     end
   end)
@@ -732,12 +714,18 @@ defmodule Md.Parser.Default do
 
     defp do_parse(
            <<unquote(md), rest::binary>>,
-           %State{mode: [{:nested, _tag, _level} | _], bag: %{indent: indent}} = state
+           %State{mode: [{:nested, _tag, _level} | _], bag: %{indent: indents}} = state
          ) do
+      indent =
+        case indents do
+          [indent | _] -> indent
+          _ -> 0
+        end
+
       state =
         state
         |> listener({:tag, {unquote(md), unquote(tag)}, true})
-        |> push_mode({:inner, {unquote(tag), unquote(outer)}, List.first(indent) || 0})
+        |> push_mode({:inner, {unquote(tag), unquote(outer)}, indent})
         |> push_path([{unquote(outer), unquote(attrs), []}, {unquote(tag), unquote(attrs), []}])
 
       do_parse(rest, state)
@@ -943,14 +931,6 @@ defmodule Md.Parser.Default do
     %State{state | ast: ast}
   end
 
-  @spec fix_element(L.branch()) :: L.branch()
-  Enum.each(@syntax[:fixes], fn {tag, attribute} ->
-    defp fix_element({unquote(tag), attrs, [attr | content]}),
-      do: {unquote(tag), Map.put(attrs || %{}, unquote(attribute), attr), content}
-  end)
-
-  defp fix_element(element), do: element
-
   @spec update_attrs(L.branch(), %{required(atom()) => atom()}) :: L.branch()
   defp update_attrs({_, _, []} = tag, _), do: tag
 
@@ -993,7 +973,6 @@ defmodule Md.Parser.Default do
 
   @spec reverse(L.trace()) :: L.trace()
   defp reverse({_, _, branch} = trace) when is_list(branch), do: trim(trace, true)
-  defp reverse(any), do: any
 
   @spec trim(L.trace(), boolean()) :: L.trace()
   defp trim(trace, reverse?)

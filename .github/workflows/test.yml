@@ -31,4 +31,4 @@ jobs:
           mix do deps.get, compile
           mix compile
       - name: Setup Rabbit → Run tests
-        run: mix test
+        run: mix tests
