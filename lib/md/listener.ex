@@ -38,7 +38,11 @@ defmodule Md.Listener do
           mode: [parse_mode()],
           ast: [branch()],
           listener: nil | module(),
-          bag: %{indent: [non_neg_integer()], stock: [branch()]}
+          bag: %{
+            indent: [non_neg_integer()],
+            stock: [branch()],
+            deferred: [binary()]
+          }
         }
 
   @callback element(context(), state()) :: :ok | {:update, state()}

@@ -32,7 +32,11 @@ defmodule Md.Parser do
     @moduledoc """
     The internal state of the parser.
     """
-    defstruct path: [], ast: [], mode: [:idle], listener: nil, bag: %{indent: [], stock: []}
+    defstruct path: [],
+              ast: [],
+              mode: [:idle],
+              listener: nil,
+              bag: %{indent: [], stock: [], deferred: []}
 
     defimpl Inspect do
       @moduledoc false
@@ -48,13 +52,18 @@ defmodule Md.Parser do
                  any}
               | {:doc_nest, any, :cursor | :reset | non_neg_integer, :always | :break}
       def inspect(
-            %State{path: path, ast: ast, mode: mode, bag: %{indent: indent, stock: stock}},
+            %State{
+              path: path,
+              ast: ast,
+              mode: mode,
+              bag: %{indent: indent, stock: stock, deferred: deferred}
+            },
             opts
           ) do
         inner = [
           path: path,
           ast: ast,
-          internals: [mode: mode, indent: indent, stock: stock]
+          internals: [mode: mode, indent: indent, stock: stock, deferred: deferred]
         ]
 
         concat(["#Md<", to_doc(inner, opts), ">"])

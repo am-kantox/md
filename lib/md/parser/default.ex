@@ -9,11 +9,13 @@ defmodule Md.Parser.Default do
   @behaviour Md.Parser
 
   @ol_max Application.compile_env(:md, :ol_max, 10)
+  @disclosure_range 3..5
 
   @default_syntax %{
     settings: %{
       outer: :p,
       span: :span,
+      disclosure_range: @disclosure_range,
       empty_tags: ~w|img hr br|a
     },
     fixes: %{
@@ -68,8 +70,13 @@ defmodule Md.Parser.Default do
          closing: "]",
          inner_opening: "(",
          inner_closing: ")",
+         disclosure_opening: "[",
+         disclosure_closing: "]",
          outer: {:attribute, :href}
        }}
+    ],
+    disclosure: [
+      {":", %{until: :eol}}
     ],
     paragraph: [
       {"#", %{tag: :h1}},
@@ -218,6 +225,70 @@ defmodule Md.Parser.Default do
     end
   end)
 
+  disclosure_range = Map.get(@syntax[:settings], :disclosure_range, @disclosure_range)
+
+  # disclosure_range =
+  #   if Version.compare(System.version(), "1.12.0") == :lt do
+  #     Range.new(disclosure_range.last, disclosure_range.first)
+  #   else
+  #     Range.new(disclosure_range.last, disclosure_range.first, -1)
+  #   end
+
+  Enum.each(@syntax[:disclosure], fn {md, properties} ->
+    until = Map.get(properties, :until, :eol)
+
+    until =
+      case until do
+        :eol -> "\n"
+        chars when is_binary(chars) -> chars
+      end
+
+    Enum.each(disclosure_range, fn len ->
+      defp do_parse(
+             <<disclosure::binary-size(unquote(len)), unquote(md), rest::binary>> = input,
+             %State{
+               mode: [{:linefeed, pos} | _],
+               bag: %{deferred: deferreds}
+             } = state
+           ) do
+        if disclosure in deferreds do
+          state =
+            state
+            |> replace_mode(:raw)
+            |> push_path({:__deferred__, disclosure, []})
+
+          do_parse(rest, state)
+        else
+          <<c::binary-size(1), rest::binary>> = input
+
+          state =
+            state
+            |> pop_mode([{:linefeed, pos}, :md])
+            |> push_mode({:linefeed, pos})
+            |> push_char(c)
+
+          do_parse(rest, state)
+        end
+      end
+    end)
+
+    defp do_parse(
+           <<unquote(until), rest::binary>>,
+           %State{
+             mode: [:raw | _],
+             path: [{:__deferred__, disclosure, [content]} | path]
+           } = state
+         ) do
+      deferred = [{disclosure, content} | state.bag.deferred]
+
+      state =
+        %State{state | bag: Map.put(state.bag, :deferred, deferred), path: path}
+        |> replace_mode({:linefeed, 0})
+
+      do_parse(rest, state)
+    end
+  end)
+
   Enum.each(@syntax[:block], fn {md, properties} ->
     [tag | _] = tags = List.wrap(properties[:tag])
     mode = properties[:mode]
@@ -358,6 +429,8 @@ defmodule Md.Parser.Default do
     inner_opening = properties[:inner_opening]
     inner_closing = properties[:inner_closing]
     inner_tag = Map.get(properties, :inner_tag, true)
+    disclosure_opening = properties[:disclosure_opening]
+    disclosure_closing = properties[:disclosure_closing]
     attrs = Macro.escape(properties[:attributes])
 
     defp do_parse(<<unquote(md), rest::binary>>, state()) when mode != :raw do
@@ -380,6 +453,20 @@ defmodule Md.Parser.Default do
         | bag: %{state.bag | stock: content},
           path: [{unquote(tag), attrs, []} | path_tail]
       })
+    end
+
+    if not is_nil(disclosure_opening) do
+      defp do_parse(
+             <<unquote(closing), unquote(disclosure_opening), rest::binary>>,
+             %State{mode: [mode | _], path: [{unquote(tag), attrs, content} | path_tail]} = state
+           )
+           when mode != :raw do
+        do_parse(rest, %State{
+          state
+          | bag: %{state.bag | stock: content},
+            path: [{unquote(tag), attrs, []} | path_tail]
+        })
+      end
     end
 
     defp do_parse(
@@ -417,6 +504,65 @@ defmodule Md.Parser.Default do
         |> replace_mode(:md)
 
       do_parse(rest, state)
+    end
+
+    if not is_nil(disclosure_closing) do
+      defp do_parse(
+             <<unquote(disclosure_closing), rest::binary>>,
+             %State{
+               mode: [mode | _],
+               bag: %{stock: outer_content},
+               path: [{unquote(tag), attrs, [content]} | path_tail]
+             } = state
+           )
+           when mode != :raw do
+        content = unquote(disclosure_opening) <> content <> unquote(disclosure_closing)
+
+        final_tag =
+          case unquote(outer) do
+            {:attribute, attr} ->
+              attributes =
+                Map.put(attrs || %{}, :__deferred__, %{
+                  kind: :attribute,
+                  attribute: attr,
+                  content: content
+                })
+
+              {unquote(tag), attributes, outer_content}
+
+            {:tag, {tag, attr}} ->
+              attributes =
+                Map.put(attrs || %{}, :__deferred__, %{
+                  kind: :attribute,
+                  attribute: attr,
+                  content: content
+                })
+
+              {unquote(tag), attrs,
+               [{unquote(inner_tag), attributes, []}, {tag, nil, outer_content}]}
+
+            {:tag, tag} ->
+              attributes = Map.put(attrs || %{}, :__deferred__, %{kind: :text, content: content})
+
+              {unquote(tag), attrs,
+               [
+                 fix_element({unquote(inner_tag), attributes, []}),
+                 {tag, nil, outer_content}
+               ]}
+          end
+
+        bag =
+          state.bag
+          |> Map.put(:stock, [])
+          |> Map.update!(:deferred, &[content | &1])
+
+        state =
+          %State{state | bag: bag, path: [final_tag | path_tail]}
+          |> to_ast()
+          |> replace_mode(:md)
+
+        do_parse(rest, state)
+      end
     end
   end)
 
@@ -661,8 +807,9 @@ defmodule Md.Parser.Default do
       state
       |> listener(:finalize)
       |> rewind_state()
+      |> apply_deferreds()
 
-    state = %State{state | mode: [:finished], bag: %{indent: [], stock: []}}
+    state = %State{state | mode: [:finished], bag: %{state.bag | indent: [], stock: []}}
 
     listener(state, :end)
   end
@@ -765,6 +912,35 @@ defmodule Md.Parser.Default do
 
         if i < count or inclusive, do: to_ast(state, pop), else: state
     end
+  end
+
+  @spec apply_deferreds(L.state()) :: L.state()
+  defp apply_deferreds(%State{bag: %{deferred: []}} = state), do: state
+
+  defp apply_deferreds(%State{bag: %{deferred: deferreds}} = state) do
+    deferreds =
+      deferreds
+      |> Enum.filter(&match?({_, _}, &1))
+      |> Map.new()
+
+    ast =
+      Macro.prewalk(state.ast, fn
+        {tag, %{__deferred__: %{attribute: attribute, content: mark, kind: :attribute}} = attrs,
+         content} ->
+          value = Map.get(deferreds, mark, content)
+
+          attrs =
+            attrs
+            |> Map.delete(:__deferred__)
+            |> Map.put(attribute, value)
+
+          {tag, attrs, content}
+
+        other ->
+          other
+      end)
+
+    %State{state | ast: ast}
   end
 
   @spec fix_element(L.branch()) :: L.branch()
