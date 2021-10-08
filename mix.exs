@@ -17,6 +17,15 @@ defmodule Md.MixProject do
       deps: deps(),
       aliases: aliases(),
       docs: docs(),
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        credo: :ci,
+        dialyzer: :ci,
+        tests: :test,
+        "coveralls.json": :test,
+        "coveralls.html": :test,
+        "quality.ci": :ci
+      ],
       dialyzer: [
         plt_file: {:no_warn, ".dialyzer/plts/dialyzer.plt"},
         plt_add_apps: [],
@@ -41,8 +50,9 @@ defmodule Md.MixProject do
   defp deps do
     [
       {:xml_builder, "~> 2.0"},
-      {:credo, "~> 1.0", only: [:dev, :ci]},
-      {:dialyxir, "~> 1.0", only: [:dev, :ci], runtime: false},
+      {:credo, "~> 1.0", only: :ci, runtime: false},
+      {:excoveralls, "~> 0.14", only: :test, runtime: false},
+      {:dialyxir, "~> 1.0", only: :ci, runtime: false},
       {:ex_doc, ">= 0.0.0", only: :dev}
     ]
   end
@@ -50,6 +60,7 @@ defmodule Md.MixProject do
   defp aliases do
     [
       quality: ["format", "credo --strict", "dialyzer"],
+      tests: ["coveralls.html --trace"],
       "quality.ci": [
         "format --check-formatted",
         "credo --strict",
