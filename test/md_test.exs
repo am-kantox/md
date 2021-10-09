@@ -197,7 +197,7 @@ defmodule MdTest do
 
     check this [link][1]!
 
-    Another text.
+    Another [text].
 
     [1]: https://example.com
     [2]: https://example.com
@@ -206,7 +206,7 @@ defmodule MdTest do
     assert [
              {:p, nil, ["Hi,"]},
              {:p, nil, ["check this ", {:a, %{href: " https://example.com"}, ["link"]}, "!"]},
-             {:p, nil, ["Another text.", "\n", "\n", "[2]: https://example.com"]}
+             {:p, nil, ["Another [text].", "\n", "\n", "[2]: https://example.com"]}
            ] == Md.parse(input).ast
   end
 

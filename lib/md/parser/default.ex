@@ -508,6 +508,20 @@ defmodule Md.Parser.Default do
              <<unquote(disclosure_closing), rest::binary>>,
              %State{
                mode: [mode | _],
+               bag: %{stock: []},
+               path: [{unquote(tag), _attrs, [content]} | path_tail]
+             } = state
+           )
+           when mode != :raw do
+        content = unquote(disclosure_opening) <> content <> unquote(disclosure_closing)
+        state = push_char(%State{state | path: path_tail}, content)
+        do_parse(rest, state)
+      end
+
+      defp do_parse(
+             <<unquote(disclosure_closing), rest::binary>>,
+             %State{
+               mode: [mode | _],
                bag: %{stock: outer_content},
                path: [{unquote(tag), attrs, [content]} | path_tail]
              } = state
