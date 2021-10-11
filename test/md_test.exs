@@ -160,6 +160,12 @@ defmodule MdTest do
     > 2.   This is the second list item.
     >
     > Here's some example code:
+    >
+    >     defmodule Foo do
+    >       def yo!, do: :ok
+    >     end
+    >
+    > Cool code, ain’t it?
     """
 
     assert [
@@ -173,7 +179,18 @@ defmodule MdTest do
                    {:li, nil, ["This is the second list item."]}
                  ]},
                 "\n",
-                "Here's some example code:"
+                "Here's some example code:",
+                "\n",
+                "\n",
+                {:div, nil,
+                 [
+                   {:pre, nil,
+                    [
+                      {:code, nil,
+                       [" defmodule Foo do", "\n", "   def yo!, do: :ok", "\n", " end"]}
+                    ]}
+                 ]},
+                "Cool code, ain’t it?"
               ]}
            ] = Md.parse(input).ast
   end
