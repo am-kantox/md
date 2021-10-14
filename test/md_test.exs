@@ -79,10 +79,10 @@ defmodule MdTest do
 
     assert [
              {:p, nil, ["foo"]},
-             {:div, nil,
+             {:div, %{class: "pre"},
               [
-                {:pre, nil,
-                 [{:code, nil, ["defmodule Foo", "\n", "    def bar, do: :baz", "\n", "end"]}]}
+                {:code, %{class: "pre"},
+                 ["defmodule Foo", "\n", "    def bar, do: :baz", "\n", "end"]}
               ]},
              {:p, nil, ["bar"]}
            ] = Md.parse(input).ast
@@ -198,13 +198,10 @@ defmodule MdTest do
                 "Here's some example code:",
                 "\n",
                 "\n",
-                {:div, nil,
+                {:div, %{class: "pre"},
                  [
-                   {:pre, nil,
-                    [
-                      {:code, nil,
-                       [" defmodule Foo do", "\n", "   def yo!, do: :ok", "\n", " end"]}
-                    ]}
+                   {:code, %{class: "pre"},
+                    [" defmodule Foo do", "\n", "   def yo!, do: :ok", "\n", " end"]}
                  ]},
                 "Cool code, ain’t it?"
               ]}

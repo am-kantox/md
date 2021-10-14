@@ -44,7 +44,7 @@ defmodule Md.Parser.Default do
       {"```", %{tag: [:pre, :code], mode: :raw, pop: %{code: :class}}}
     ],
     shift: [
-      {"    ", %{tag: [:div, :pre, :code], mode: {:inner, :raw}}}
+      {"    ", %{tag: [:div, :code], attributes: %{class: "pre"}, mode: {:inner, :raw}}}
     ],
     pair: [
       {"![",
@@ -230,7 +230,7 @@ defmodule Md.Parser.Default do
   Enum.each(@syntax[:substitute], fn {md, properties} ->
     text = Map.get(properties, :text, "")
 
-    defp do_parse(<<unquote(md), rest::binary>>, state()) do
+    defp do_parse(<<unquote(md), rest::binary>>, state()) when not is_raw(mode) do
       state =
         state
         |> listener({:substitute, unquote(md), unquote(text)})
@@ -1038,6 +1038,9 @@ defmodule Md.Parser.Default do
 
   @spec update_attrs(L.branch(), %{required(atom()) => atom()}) :: L.branch()
   defp update_attrs({_, _, []} = tag, _), do: tag
+
+  defp update_attrs({_tag, _attrs, [value | _rest]} = tag, _pop) when value in ["", "\n", "\s"],
+    do: tag
 
   defp update_attrs({tag, attrs, [value | rest]} = full_tag, pop) do
     case pop do
