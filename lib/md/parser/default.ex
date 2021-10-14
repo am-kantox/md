@@ -182,6 +182,7 @@ defmodule Md.Parser.Default do
   Enum.each(@syntax[:magnet], fn {md, properties} ->
     [tag | tags] = List.wrap(properties[:tag])
     attribute = Macro.escape(properties[:attribute])
+    include = properties[:include]
 
     defp do_parse(unquote(md) <> rest, state()) when not is_raw(mode) do
       state =
@@ -204,8 +205,15 @@ defmodule Md.Parser.Default do
             {stock <> <<x>>, <<delim>> <> rest}
         end
 
+      text =
+        case unquote(include) do
+          false -> unquote(md)
+          true -> unquote(md) <> stock
+          _ -> stock
+        end
+
       path = [
-        {unquote(tag), unquote(attribute), [stock]}
+        {unquote(tag), %{unquote(attribute) => stock}, [text]}
         | for(tag <- unquote(tags), do: {tag, nil, []})
       ]
 

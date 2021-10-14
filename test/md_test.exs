@@ -48,7 +48,7 @@ defmodule MdTest do
              {:p, nil,
               [
                 "This is a text with a reference to ",
-                {:a, :href, ["https://example.com"]},
+                {:a, %{href: "https://example.com"}, ["https://example.com"]},
                 " and like."
               ]},
              {:p, nil, ["This is another text."]}
