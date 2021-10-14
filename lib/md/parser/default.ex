@@ -37,8 +37,7 @@ defmodule Md.Parser.Default do
       {"  \n", %{tag: :br}}
     ],
     magnet: [
-      {"http://", %{tag: :a, attribute: :href}},
-      {"https://", %{tag: :a, attribute: :href}}
+      {"⚓", %{tag: :a, attribute: :href}}
     ],
     block: [
       {"```", %{tag: [:pre, :code], mode: :raw, pop: %{code: :class}}}
@@ -124,14 +123,15 @@ defmodule Md.Parser.Default do
   def syntax, do: @syntax
 
   @impl Md.Parser
-  def parse(input, listener \\ nil) do
-    %State{ast: ast, path: []} = state = do_parse(input, %State{listener: listener})
+  def parse(input, state \\ %State{}) do
+    %State{ast: ast, path: []} = state = do_parse(input, state)
     {"", %State{state | ast: Enum.reverse(ast)}}
   end
 
   # helper macros
   defguardp is_md(mode) when mode == :md
   defguardp is_comment(mode) when mode == :comment
+  defguardp is_magnet(mode) when mode == :magnet
   defguardp is_raw(mode) when mode in [:raw, {:inner, :raw}]
 
   defmacrop initial,
@@ -178,10 +178,66 @@ defmodule Md.Parser.Default do
     end
   end)
 
+  # magnets
+  Enum.each(@syntax[:magnet], fn {md, properties} ->
+    [tag | tags] = List.wrap(properties[:tag])
+    attribute = Macro.escape(properties[:attribute])
+
+    defp do_parse(unquote(md) <> rest, state()) when not is_raw(mode) do
+      state =
+        %State{state | bag: %{state.bag | stock: [""]}}
+        |> push_mode(:magnet)
+
+      do_parse(rest, state)
+    end
+
+    defp do_parse(<<x::utf8, delim::size(8), rest::binary>>, state())
+         when is_magnet(mode) and delim in [?\s, ?\n] do
+      [stock] = state.bag.stock
+
+      {stock, rest} =
+        case x do
+          x when x not in ?a..?z and x not in ?A..?Z ->
+            {stock, <<x, delim, rest::binary>>}
+
+          _ ->
+            {stock <> <<x>>, <<delim>> <> rest}
+        end
+
+      path = [
+        {unquote(tag), unquote(attribute), [stock]}
+        | for(tag <- unquote(tags), do: {tag, nil, []})
+      ]
+
+      state =
+        %State{state | bag: %{state.bag | stock: []}}
+        |> push_path(path)
+        |> to_ast()
+        |> listener({:tag, {unquote(md), unquote(tag)}, nil})
+        |> pop_mode(:magnet)
+
+      do_parse(rest, state)
+    end
+
+    defp do_parse(<<x::utf8, rest::binary>>, state()) when is_magnet(mode) do
+      [stock] = state.bag.stock
+      state = %State{state | bag: %{state.bag | stock: [stock <> <<x::utf8>>]}}
+      do_parse(rest, state)
+    end
+  end)
+
   ## comments
   Enum.each(@syntax[:comment], fn {md, properties} ->
     closing = Map.get(properties, :closing, md)
     _tag = Map.get(properties, :tag, :comment)
+
+    defp do_parse(unquote(md) <> rest, state()) when not is_raw(mode) do
+      state =
+        %State{state | bag: %{state.bag | stock: [""]}}
+        |> push_mode(:comment)
+
+      do_parse(rest, state)
+    end
 
     defp do_parse(unquote(closing) <> rest, state()) when is_comment(mode) do
       state =
@@ -194,15 +250,7 @@ defmodule Md.Parser.Default do
 
     defp do_parse(<<x::utf8, rest::binary>>, state()) when is_comment(mode) do
       [stock] = state.bag.stock
-      state = %State{state | bag: %{state.bag | stock: [<<x::utf8>> <> stock]}}
-      do_parse(rest, state)
-    end
-
-    defp do_parse(unquote(md) <> rest, state()) when not is_raw(mode) do
-      state =
-        %State{state | bag: %{state.bag | stock: [""]}}
-        |> push_mode(:comment)
-
+      state = %State{state | bag: %{state.bag | stock: [stock <> <<x::utf8>>]}}
       do_parse(rest, state)
     end
   end)
@@ -249,8 +297,8 @@ defmodule Md.Parser.Default do
       state =
         unquote(rewind)
         |> if(do: rewind_state(state), else: state)
-        |> listener({:tag, {unquote(md), unquote(tag)}, nil})
         |> push_path(for tag <- unquote(tags), do: {tag, unquote(attrs), []})
+        |> listener({:tag, {unquote(md), unquote(tag)}, nil})
         |> rewind_state(until: unquote(tag), inclusive: true)
         |> set_mode({:linefeed, 0})
 

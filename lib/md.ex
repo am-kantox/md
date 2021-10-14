@@ -12,6 +12,7 @@ defmodule Md do
   @behaviour Md.Parser
 
   alias Md.Parser.Default, as: Parser
+  alias Md.Parser.State, as: State
 
   @doc """
   Interface to the library. Use `parse/2` to parse the input to the state,
@@ -29,8 +30,9 @@ defmodule Md do
       "<p>It’s all <b>bold</b> and <it>italic</it>!</p>"
 
   """
-  def parse(input, listener \\ nil),
-    do: with({"", state} <- Parser.parse(input, listener), do: state)
+  @impl Md.Parser
+  def parse(input, state \\ %State{}),
+    do: with({"", state} <- Parser.parse(input, state), do: state)
 
   defdelegate generate(input), to: Md.Parser
   defdelegate generate(input, options), to: Md.Parser

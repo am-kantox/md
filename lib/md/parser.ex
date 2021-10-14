@@ -82,7 +82,7 @@ defmodule Md.Parser do
   @doc """
   Takes a not parsed yet input and the state, returns the updated remainder and state.
   """
-  @callback parse(binary(), module()) :: parsing_stage()
+  @callback parse(binary(), L.state()) :: parsing_stage()
 
   # TODO analyze errors
   @spec generate(binary() | L.state(), keyword()) :: binary()

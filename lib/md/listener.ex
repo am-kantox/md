@@ -15,6 +15,7 @@ defmodule Md.Listener do
           | :finished
           | :raw
           | :comment
+          | :magnet
           | :md
           | {:linefeed, non_neg_integer()}
           | {:nested, element(), non_neg_integer()}

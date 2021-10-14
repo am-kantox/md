@@ -37,6 +37,24 @@ defmodule MdTest do
              Md.parse(input).ast
   end
 
+  test "magnet" do
+    input = """
+    This is a text with a reference to ⚓https://example.com and like.
+
+    This is another text.
+    """
+
+    assert [
+             {:p, nil,
+              [
+                "This is a text with a reference to ",
+                {:a, :href, ["https://example.com"]},
+                " and like."
+              ]},
+             {:p, nil, ["This is another text."]}
+           ] = Md.parse(input).ast
+  end
+
   test "flush" do
     assert [{:p, nil, ["foo "]}, {:hr, nil, []}, {:p, nil, ["bar"]}] ==
              Md.parse("foo --- bar").ast
