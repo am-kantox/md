@@ -41,7 +41,7 @@ defmodule MdTest do
     input = """
     This is a text with a reference to ⚓https://example.com and like.
 
-    This is another text.
+    This is @mudasobwa twitter reference.
     """
 
     assert [
@@ -51,7 +51,12 @@ defmodule MdTest do
                 {:a, %{href: "https://example.com"}, ["https://example.com"]},
                 " and like."
               ]},
-             {:p, nil, ["This is another text."]}
+             {:p, nil,
+              [
+                "This is ",
+                {:a, %{href: "https://twitter.com/mudasobwa"}, ["@mudasobwa"]},
+                " twitter reference."
+              ]}
            ] = Md.parse(input).ast
   end
 
