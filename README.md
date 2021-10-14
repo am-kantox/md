@@ -30,8 +30,9 @@ But if one wants to easily extend syntax almost without limits, `Md` might be go
 There are several different syntax patterns recognizable by `Md`. Those are:
 
 - `custom` — the custom parser implementing `Md.Parser` behavious would be called
-- `substitutes` — simple substitution, like `"<"` → `"&lt;"`
-- `escapes` — characters to be treated as is, not as a part of syntax
+- `substitute` — simple substitution, like `"<"` → `"&lt;"`
+- `escape` — characters to be treated as is, not as a part of syntax
+- `comment` — characters to be treated as a comment, discarded in the output
 - `flush` — somewhat breaking a paragraph flow, like triple-dash
 - `magnet` — the markup for a single work following the patters, like `#tag`
 - `block` — the whole block of input treated distinguished, like triple-backtick

@@ -21,12 +21,15 @@ defmodule Md.Parser.Default do
     custom: [
       # {md, {handler, properties}}
     ],
-    substitutes: [
+    substitute: [
       {"<", %{text: "&lt;"}},
       {"&", %{text: "&amp;"}}
     ],
-    escapes: [
+    escape: [
       {"\\", %{}}
+    ],
+    comment: [
+      {"<!--", %{closing: "-->"}}
     ],
     flush: [
       {"---", %{tag: :hr, rewind: true}},
@@ -128,6 +131,7 @@ defmodule Md.Parser.Default do
 
   # helper macros
   defguardp is_md(mode) when mode == :md
+  defguardp is_comment(mode) when mode == :comment
   defguardp is_raw(mode) when mode in [:raw, {:inner, :raw}]
 
   defmacrop initial,
@@ -163,12 +167,41 @@ defmodule Md.Parser.Default do
   end
 
   ## escaped symbols
-  Enum.each(@syntax[:escapes], fn {md, _} ->
+  Enum.each(@syntax[:escape], fn {md, _} ->
     defp do_parse(unquote(md) <> <<x::utf8, rest::binary>>, state()) when not is_raw(mode) do
       state =
         state
         |> listener({:esc, <<x::utf8>>})
         |> push_char(x)
+
+      do_parse(rest, state)
+    end
+  end)
+
+  ## comments
+  Enum.each(@syntax[:comment], fn {md, properties} ->
+    closing = Map.get(properties, :closing, md)
+    _tag = Map.get(properties, :tag, :comment)
+
+    defp do_parse(unquote(closing) <> rest, state()) when is_comment(mode) do
+      state =
+        state
+        |> listener({:comment, state.bag.stock})
+        |> pop_mode(:comment)
+
+      do_parse(rest, state)
+    end
+
+    defp do_parse(<<x::utf8, rest::binary>>, state()) when is_comment(mode) do
+      [stock] = state.bag.stock
+      state = %State{state | bag: %{state.bag | stock: [<<x::utf8>> <> stock]}}
+      do_parse(rest, state)
+    end
+
+    defp do_parse(unquote(md) <> rest, state()) when not is_raw(mode) do
+      state =
+        %State{state | bag: %{state.bag | stock: [""]}}
+        |> push_mode(:comment)
 
       do_parse(rest, state)
     end
@@ -194,7 +227,7 @@ defmodule Md.Parser.Default do
       end
   end)
 
-  Enum.each(@syntax[:substitutes], fn {md, properties} ->
+  Enum.each(@syntax[:substitute], fn {md, properties} ->
     text = Map.get(properties, :text, "")
 
     defp do_parse(<<unquote(md), rest::binary>>, state()) do

@@ -21,6 +21,22 @@ defmodule MdTest do
     assert [{:p, nil, ["foo &lt;br> bar"]}] == Md.parse("foo <br> bar").ast
   end
 
+  test "comment" do
+    input = """
+    This is a text.
+    <!-- This is the comment. -->
+
+    <!--
+    This is the multiline comment.
+    -->
+
+    This is another text.
+    """
+
+    assert [{:p, nil, ["This is a text."]}, {:p, nil, ["This is another text."]}] =
+             Md.parse(input).ast
+  end
+
   test "flush" do
     assert [{:p, nil, ["foo "]}, {:hr, nil, []}, {:p, nil, ["bar"]}] ==
              Md.parse("foo --- bar").ast

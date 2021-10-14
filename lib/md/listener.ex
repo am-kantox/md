@@ -14,6 +14,7 @@ defmodule Md.Listener do
           :idle
           | :finished
           | :raw
+          | :comment
           | :md
           | {:linefeed, non_neg_integer()}
           | {:nested, element(), non_neg_integer()}
@@ -55,12 +56,13 @@ defmodule Md.Listener do
 
       require Logger
 
-      def handle_start(state), do: Logger.debug("[#{unquote(emoji)} start]")
-      def handle_break(state), do: :ok
-      def handle_linefeed(state), do: :ok
-      def handle_whitespace(state), do: :ok
-      def handle_finalize(state), do: :ok
-      def handle_end(state), do: Logger.debug("[#{unquote(emoji)} end]")
+      def handle_start(_state), do: Logger.debug("[#{unquote(emoji)} start]")
+      def handle_break(_state), do: :ok
+      def handle_linefeed(_state), do: :ok
+      def handle_whitespace(_state), do: :ok
+      def handle_finalize(_state), do: :ok
+      def handle_end(_state), do: Logger.debug("[#{unquote(emoji)} end]")
+      def handle_comment(_text, _state), do: :ok
 
       def handle_tag({element, opening?}, state) do
         Logger.debug(
@@ -69,13 +71,17 @@ defmodule Md.Listener do
         )
       end
 
-      def handle_esc(state), do: :ok
-      def handle_char(state), do: :ok
-      def handle_substitute({_source, _target}, state), do: :ok
+      def handle_esc(_state), do: :ok
+      def handle_char(_state), do: :ok
+      def handle_substitute({_source, _target}, _state), do: :ok
 
       @impl Md.Listener
       def element({:substitute, source, target}, state),
         do: handle_substitute({source, target}, state)
+
+      @impl Md.Listener
+      def element({:comment, text}, state),
+        do: handle_comment(text, state)
 
       @impl Md.Listener
       def element({:tag, element, opening?}, state),
@@ -95,6 +101,7 @@ defmodule Md.Listener do
                      handle_whitespace: 1,
                      handle_finalize: 1,
                      handle_end: 1,
+                     handle_comment: 2,
                      handle_tag: 2,
                      handle_esc: 1,
                      handle_char: 1
