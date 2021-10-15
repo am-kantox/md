@@ -49,6 +49,14 @@ defmodule Md.Parser.Default do
     pair: [
       {"![",
        %{
+         tag: :img,
+         closing: "]",
+         inner_opening: "(",
+         inner_closing: ")",
+         outer: {:attribute, {:src, :title}}
+       }},
+      {"!![",
+       %{
          tag: :figure,
          closing: "]",
          inner_opening: "(",
@@ -612,6 +620,15 @@ defmodule Md.Parser.Default do
          when not is_raw(mode) do
       final_tag =
         case unquote(outer) do
+          {:attribute, {attr_content, attr_outer_content}} ->
+            attrs =
+              attrs
+              |> Kernel.||(%{})
+              |> Map.put(attr_content, content)
+              |> Map.put(attr_outer_content, List.first(outer_content))
+
+            {unquote(tag), attrs, []}
+
           {:attribute, attribute} ->
             {unquote(tag), Map.put(attrs || %{}, attribute, content), outer_content}
 

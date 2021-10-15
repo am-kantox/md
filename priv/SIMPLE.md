@@ -8,7 +8,7 @@ baz* 42
 > Hi, *there
 > olala
 
-> Hi, ![image](https://image.com)
+> Hi, !![image](https://image.com)
 > > 2nd *1st* line
 > > 2nd `2nd` line
 > boom
