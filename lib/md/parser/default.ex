@@ -110,7 +110,8 @@ defmodule Md.Parser.Default do
       {"~", %{tag: :s}},
       {"~~", %{tag: :del}},
       {"``", %{tag: :span, mode: :raw, attributes: %{class: "code-inline"}}},
-      {"`", %{tag: :code, mode: :raw, attributes: %{class: "code-inline"}}}
+      {"`", %{tag: :code, mode: :raw, attributes: %{class: "code-inline"}}},
+      {"[^", %{closing: "]", tag: :b, mode: :raw}}
     ]
   }
 
@@ -683,6 +684,20 @@ defmodule Md.Parser.Default do
 
         final_tag =
           case unquote(outer) do
+            {:attribute, {attr_content, attr_outer_content}} ->
+              attributes =
+                attrs
+                |> Kernel.||(%{})
+                |> Map.put(:__deferred__, %{
+                  kind: :attribute,
+                  attribute: attr_content,
+                  content: content,
+                  outer_attribute: attr_outer_content,
+                  outer_content: outer_content
+                })
+
+              {unquote(tag), attributes, []}
+
             {:attribute, attr} ->
               attributes =
                 Map.put(attrs || %{}, :__deferred__, %{
@@ -916,11 +931,11 @@ defmodule Md.Parser.Default do
     [tag | _] = tags = List.wrap(properties[:tag])
     mode = properties[:mode]
     attrs = Macro.escape(properties[:attributes])
-
+    closing = Map.get(properties, :closing, md)
     closing_match = closing_match(tags)
 
     defp do_parse(
-           <<unquote(md), rest::binary>>,
+           <<unquote(closing), rest::binary>>,
            %State{mode: [mode | _], path: [unquote_splicing(closing_match) | _]} = state
          )
          when mode == unquote(mode) or not is_raw(mode) do
