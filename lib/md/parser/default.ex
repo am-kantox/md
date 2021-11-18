@@ -8,6 +8,8 @@ defmodule Md.Parser.Default do
 
   @behaviour Md.Parser
 
+  require Application
+
   @ol_max Application.compile_env(:md, :ol_max, 10)
   @disclosure_range 3..5
 
