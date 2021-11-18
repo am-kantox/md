@@ -38,6 +38,7 @@ defmodule Md.Parser.Default do
     ],
     magnet: [
       {"⚓", %{transform: Md.Transforms.Anchor}},
+      {"[^", %{transform: Md.Transforms.Footnote, terminators: [?\]], greedy: true}},
       {"@", %{transform: &Md.Transforms.TwitterHandle.apply/2}}
     ],
     block: [
@@ -138,6 +139,7 @@ defmodule Md.Parser.Default do
   end
 
   # helper macros
+  defguardp is_alnum(x) when x == ?_ or x in ?0..?9 or x in ?a..?z or x in ?A..?Z
   defguardp is_md(mode) when mode == :md
   defguardp is_comment(mode) when mode == :comment
   defguardp is_magnet(mode) when mode == :magnet
@@ -187,62 +189,6 @@ defmodule Md.Parser.Default do
     end
   end)
 
-  # magnets
-  Enum.each(@syntax[:magnet], fn {md, properties} ->
-    transform =
-      properties[:transform]
-      |> case do
-        f when is_function(f, 2) -> f
-        m when is_atom(m) -> &m.apply/2
-      end
-      |> Macro.escape()
-
-    defp do_parse(unquote(md) <> rest, state()) when not is_raw(mode) do
-      state =
-        %State{state | bag: %{state.bag | stock: ["", unquote(md)]}}
-        |> push_mode(:magnet)
-
-      do_parse(rest, state)
-    end
-
-    defp do_parse(
-           <<x::utf8, delim, rest::binary>>,
-           %State{
-             bag: %{stock: [stock, unquote(md)]},
-             mode: [mode | _]
-           } = state
-         )
-         when is_magnet(mode) and delim in [?\s, ?\n] do
-      {stock, rest} =
-        case x do
-          x when x not in ?a..?z and x not in ?A..?Z ->
-            {stock, <<x, delim, rest::binary>>}
-
-          _ ->
-            {stock <> <<x>>, <<delim>> <> rest}
-        end
-
-      transformed = unquote(transform).(unquote(md), stock)
-
-      state =
-        %State{state | bag: %{state.bag | stock: []}}
-        |> push_path(transformed)
-        |> to_ast()
-        |> listener({:tag, {unquote(md), :magnet}, nil})
-        |> pop_mode(:magnet)
-
-      do_parse(rest, state)
-    end
-  end)
-
-  defp do_parse(<<x::utf8, rest::binary>>, state()) when is_magnet(mode) do
-    [stock, md] = state.bag.stock
-
-    state = %State{state | bag: %{state.bag | stock: [stock <> <<x::utf8>>, md]}}
-
-    do_parse(rest, state)
-  end
-
   ## comments
   Enum.each(@syntax[:comment], fn {md, properties} ->
     closing = Map.get(properties, :closing, md)
@@ -271,6 +217,133 @@ defmodule Md.Parser.Default do
       do_parse(rest, state)
     end
   end)
+
+  disclosure_range = Map.get(@syntax[:settings], :disclosure_range, @disclosure_range)
+
+  Enum.each(@syntax[:disclosure], fn {md, properties} ->
+    until = Map.get(properties, :until, :eol)
+
+    until =
+      case until do
+        :eol -> "\n"
+        chars when is_binary(chars) -> chars
+      end
+
+    Enum.each(disclosure_range, fn len ->
+      defp do_parse(
+             <<disclosure::binary-size(unquote(len)), unquote(md), rest::binary>> = input,
+             %State{
+               mode: [{:linefeed, pos} | _],
+               bag: %{deferred: deferreds}
+             } = state
+           )
+           when length(deferreds) > 0 do
+        IO.inspect({disclosure, deferreds, state}, label: "★★★")
+
+        if disclosure in deferreds do
+          state =
+            state
+            |> replace_mode({:inner, :raw})
+            |> push_path({:__deferred__, disclosure, []})
+            |> IO.inspect(label: "☆1☆")
+
+          do_parse(rest, state)
+        else
+          <<c::binary-size(1), rest::binary>> = input
+
+          state =
+            state
+            |> pop_mode([{:linefeed, pos}, :md])
+            |> push_mode({:linefeed, pos})
+            |> push_char(c)
+            |> IO.inspect(label: "☆2☆")
+
+          do_parse(rest, state)
+        end
+      end
+    end)
+
+    defp do_parse(
+           <<unquote(until), rest::binary>>,
+           %State{
+             mode: [mode | _],
+             path: [{:__deferred__, disclosure, [content]} | path]
+           } = state
+         )
+         when is_raw(mode) do
+      deferred = [{disclosure, content} | state.bag.deferred]
+      IO.inspect({deferred, state}, label: "DEF")
+
+      state =
+        %State{state | bag: Map.put(state.bag, :deferred, deferred), path: path}
+        |> replace_mode({:linefeed, 0})
+
+      do_parse(rest, state)
+    end
+  end)
+
+  # magnets
+  Enum.each(@syntax[:magnet], fn {md, properties} ->
+    transform =
+      properties[:transform]
+      |> case do
+        f when is_function(f, 2) -> f
+        m when is_atom(m) -> &m.apply/2
+      end
+      |> Macro.escape()
+
+    terminators = Map.get(properties, :terminators, [?\s, ?\n])
+    greedy = Map.get(properties, :greedy, false)
+
+    defp do_parse(unquote(md) <> rest, state()) when not is_raw(mode) do
+      state =
+        %State{state | bag: %{state.bag | stock: ["", unquote(md)]}}
+        |> push_mode(:magnet)
+
+      do_parse(rest, state)
+    end
+
+    defp do_parse(
+           <<x::utf8, delim, rest::binary>>,
+           %State{
+             bag: %{stock: [stock, unquote(md)]},
+             mode: [mode | _]
+           } = state
+         )
+         when is_magnet(mode) and delim in unquote(terminators) do
+      {pre, post, delim} =
+        if unquote(greedy), do: {unquote(md), <<delim>>, ""}, else: {"", "", <<delim>>}
+
+      {stock, rest} =
+        case x do
+          x when not is_alnum(x) ->
+            {pre <> stock <> post, <<x>> <> delim <> rest}
+
+          _ ->
+            {pre <> stock <> <<x>> <> post, delim <> rest}
+        end
+
+      transformed = unquote(transform).(unquote(md), stock)
+
+      state =
+        %State{state | bag: %{state.bag | deferred: [stock | state.bag.deferred], stock: []}}
+        |> IO.inspect(label: "OOOOO")
+        |> push_path(transformed)
+        |> to_ast()
+        |> listener({:tag, {unquote(md), :magnet}, nil})
+        |> pop_mode(:magnet)
+
+      do_parse(rest, state)
+    end
+  end)
+
+  defp do_parse(<<x::utf8, rest::binary>>, state()) when is_magnet(mode) do
+    [stock, md] = state.bag.stock
+
+    state = %State{state | bag: %{state.bag | stock: [stock <> <<x::utf8>>, md]}}
+
+    do_parse(rest, state)
+  end
 
   Enum.each(@syntax[:custom], fn
     {md, {handler, properties}} when is_atom(handler) or is_function(handler, 2) ->
@@ -318,71 +391,6 @@ defmodule Md.Parser.Default do
         |> listener({:tag, {unquote(md), unquote(tag)}, nil})
         |> rewind_state(until: unquote(tag), inclusive: true)
         |> set_mode({:linefeed, 0})
-
-      do_parse(rest, state)
-    end
-  end)
-
-  disclosure_range = Map.get(@syntax[:settings], :disclosure_range, @disclosure_range)
-
-  # disclosure_range =
-  #   if Version.compare(System.version(), "1.12.0") == :lt do
-  #     Range.new(disclosure_range.last, disclosure_range.first)
-  #   else
-  #     Range.new(disclosure_range.last, disclosure_range.first, -1)
-  #   end
-
-  Enum.each(@syntax[:disclosure], fn {md, properties} ->
-    until = Map.get(properties, :until, :eol)
-
-    until =
-      case until do
-        :eol -> "\n"
-        chars when is_binary(chars) -> chars
-      end
-
-    Enum.each(disclosure_range, fn len ->
-      defp do_parse(
-             <<disclosure::binary-size(unquote(len)), unquote(md), rest::binary>> = input,
-             %State{
-               mode: [{:linefeed, pos} | _],
-               bag: %{deferred: deferreds}
-             } = state
-           ) do
-        if disclosure in deferreds do
-          state =
-            state
-            |> replace_mode({:inner, :raw})
-            |> push_path({:__deferred__, disclosure, []})
-
-          do_parse(rest, state)
-        else
-          <<c::binary-size(1), rest::binary>> = input
-
-          state =
-            state
-            |> pop_mode([{:linefeed, pos}, :md])
-            |> push_mode({:linefeed, pos})
-            |> push_char(c)
-
-          do_parse(rest, state)
-        end
-      end
-    end)
-
-    defp do_parse(
-           <<unquote(until), rest::binary>>,
-           %State{
-             mode: [mode | _],
-             path: [{:__deferred__, disclosure, [content]} | path]
-           } = state
-         )
-         when is_raw(mode) do
-      deferred = [{disclosure, content} | state.bag.deferred]
-
-      state =
-        %State{state | bag: Map.put(state.bag, :deferred, deferred), path: path}
-        |> replace_mode({:linefeed, 0})
 
       do_parse(rest, state)
     end
@@ -1089,6 +1097,7 @@ defmodule Md.Parser.Default do
       deferreds
       |> Enum.filter(&match?({_, _}, &1))
       |> Map.new()
+      |> IO.inspect()
 
     ast =
       Macro.prewalk(state.ast, fn

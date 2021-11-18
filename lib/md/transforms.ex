@@ -14,6 +14,20 @@ defmodule Md.Transforms.Anchor do
   end
 end
 
+defmodule Md.Transforms.Footnote do
+  @moduledoc false
+  @behaviour Md.Transforms
+
+  @impl Md.Transforms
+  def apply(md, text) do
+    # FIXME closing is needed here
+    ref = String.slice(text, String.length(md)..-2)
+
+    {:a, %{__deferred__: %{attribute: :href, content: text, kind: :attribute}},
+     [{:sup, nil, [ref]}]}
+  end
+end
+
 defmodule Md.Transforms.TwitterHandle do
   @moduledoc false
   @behaviour Md.Transforms
