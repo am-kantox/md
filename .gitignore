@@ -30,3 +30,5 @@ bench/snapshots/
 /priv/*.htm*
 
 .dialyzer/plts/*plt*
+
+/.elixir_ls/
