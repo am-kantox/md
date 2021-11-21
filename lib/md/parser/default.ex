@@ -33,6 +33,9 @@ defmodule Md.Parser.Default do
     comment: [
       {"<!--", %{closing: "-->"}}
     ],
+    matrix: [
+      {"|", %{tag: :td, outer: :table, inner: :tr, first_inner_tag: :th}}
+    ],
     flush: [
       {"---", %{tag: :hr, rewind: true}},
       {"  \n", %{tag: :br}},
@@ -217,6 +220,62 @@ defmodule Md.Parser.Default do
     defp do_parse(<<x::utf8, rest::binary>>, state()) when is_comment(mode) do
       [stock] = state.bag.stock
       state = %State{state | bag: %{state.bag | stock: [stock <> <<x::utf8>>]}}
+      do_parse(rest, state)
+    end
+  end)
+
+  ## matrices
+  Enum.each(@syntax[:matrix], fn {md, properties} ->
+    outer = Map.get(properties, :outer, md)
+    inner = Map.get(properties, :inner, outer)
+    [tag | _] = tags = properties |> Map.get(:tag, :div) |> List.wrap()
+    first_inner_tag = Map.get(properties, :first_inner_tag, tag)
+    attrs = Macro.escape(properties[:attributes])
+
+    defp do_parse(
+           <<unquote(md), rest::binary>>,
+           %State{
+             mode: [{:linefeed, pos} | _],
+             path: [{tag, _, _} | _]
+           } = state
+         )
+         when tag in [unquote(first_inner_tag), unquote_splicing(tags)] do
+      state =
+        state
+        |> IO.inspect()
+        |> pop_mode([{:linefeed, pos}, :md])
+        |> rewind_state(until: unquote(inner), inclusive: true)
+        |> push_path({unquote(inner), nil, []})
+        |> push_path({unquote(tag), nil, []})
+        |> push_mode(:md)
+
+      do_parse(rest, state)
+    end
+
+    defp do_parse(
+           <<unquote(md), rest::binary>>,
+           %State{path: [{tag, _, _} | _]} = state
+         )
+         when tag in [unquote(first_inner_tag), unquote_splicing(tags)] do
+      state =
+        state
+        |> to_ast()
+        |> push_path({tag, nil, []})
+
+      do_parse(rest, state)
+    end
+
+    defp do_parse(<<unquote(md), rest::binary>>, state_linefeed()) do
+      state =
+        state
+        |> pop_mode([{:linefeed, pos}, :md])
+        |> listener({:tag, {unquote(md), unquote(outer)}, true})
+        |> listener({:tag, {unquote(md), unquote(first_inner_tag)}, true})
+        |> push_path({unquote(outer), unquote(attrs), []})
+        |> push_path({unquote(inner), nil, []})
+        |> push_path({unquote(first_inner_tag), nil, []})
+        |> push_mode(:md)
+
       do_parse(rest, state)
     end
   end)
