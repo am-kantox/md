@@ -82,6 +82,7 @@ see the sources (ATM.)
 
 ## Changelog
 
+- **`0.3.0`** relaxed support for comments and tables
 - **`0.2.1`** deferred references like in `[link][1]` followed by `[1]: https://example.com` somewhere
 - **`0.2.0`** PoC, most of reasonable markdown is supported
 
