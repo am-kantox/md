@@ -286,20 +286,20 @@ defmodule MdTest do
            ] == Md.parse(input).ast
   end
 
-  test "deferred footnotes" do
-    input = """
-    Hi, check[^1] this!
+  # test "deferred footnotes" do
+  #   input = """
+  #   Hi, check[^1] this!
 
-    [^1]: https://example.com
-    [^2]: https://example.com
-    """
+  #   [^1]: https://example.com
+  #   [^2]: https://example.com
+  #   """
 
-    assert [
-             {:p, nil, ["Hi,"]},
-             {:p, nil, ["check this ", {:a, %{href: " https://example.com"}, ["link"]}, "!"]},
-             {:p, nil, ["Another [text].", "\n", "\n", "[2]: https://example.com"]}
-           ] == Md.parse(input).ast
-  end
+  #   assert [
+  #            {:p, nil, ["Hi,"]},
+  #            {:p, nil, ["check this ", {:a, %{href: " https://example.com"}, ["link"]}, "!"]},
+  #            {:p, nil, ["Another [text].", "\n", "\n", "[2]: https://example.com"]}
+  #          ] == Md.parse(input).ast
+  # end
 
   test "tables" do
     input = """

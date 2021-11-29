@@ -42,7 +42,7 @@ defmodule Md.Parser do
       @moduledoc false
       import Inspect.Algebra
 
-      @spec inspect(%Md.Parser.State{}, Inspect.Opts.t()) ::
+      @spec inspect(L.state(), Inspect.Opts.t()) ::
               :doc_line
               | :doc_nil
               | binary

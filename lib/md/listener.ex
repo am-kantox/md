@@ -14,6 +14,7 @@ defmodule Md.Listener do
           :idle
           | :finished
           | :raw
+          | :skip
           | :comment
           | :magnet
           | :md
