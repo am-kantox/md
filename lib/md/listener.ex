@@ -14,11 +14,13 @@ defmodule Md.Listener do
           :idle
           | :finished
           | :raw
+          | :skip
           | :comment
           | :magnet
           | :md
           | {:linefeed, non_neg_integer()}
           | {:nested, element(), non_neg_integer()}
+          | {:inner, :raw}
           | {:inner, element(), non_neg_integer()}
 
   @type context ::

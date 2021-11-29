@@ -33,6 +33,9 @@ defmodule Md.Parser.Default do
     comment: [
       {"<!--", %{closing: "-->"}}
     ],
+    matrix: [
+      {"|", %{tag: :td, outer: :table, inner: :tr, first_inner_tag: :th, skip: "|-"}}
+    ],
     flush: [
       {"---", %{tag: :hr, rewind: true}},
       {"  \n", %{tag: :br}},
@@ -180,6 +183,16 @@ defmodule Md.Parser.Default do
     do_parse(input, state)
   end
 
+  # :skip
+  defp do_parse(<<?\n, input::binary>>, state(:skip)) do
+    state = state |> pop_mode(:skip) |> push_mode({:linefeed, 0})
+    do_parse(input, state)
+  end
+
+  defp do_parse(<<_::utf8, input::binary>>, state(:skip)) do
+    do_parse(input, state)
+  end
+
   ## escaped symbols
   Enum.each(@syntax[:escape], fn {md, _} ->
     defp do_parse(unquote(md) <> <<x::utf8, rest::binary>>, state()) when not is_raw(mode) do
@@ -221,6 +234,73 @@ defmodule Md.Parser.Default do
     end
   end)
 
+  ## matrices
+  Enum.each(@syntax[:matrix], fn {md, properties} ->
+    skip = Map.get(properties, :skip)
+    outer = Map.get(properties, :outer, md)
+    inner = Map.get(properties, :inner, outer)
+    [tag | _] = tags = properties |> Map.get(:tag, :div) |> List.wrap()
+    first_inner_tag = Map.get(properties, :first_inner_tag, tag)
+    attrs = Macro.escape(properties[:attributes])
+
+    if not is_nil(skip) do
+      defp do_parse(<<unquote(skip), rest::binary>>, state_linefeed()) do
+        state =
+          state
+          |> pop_mode([{:linefeed, pos}, :md])
+          |> push_mode(:skip)
+
+        do_parse(rest, state)
+      end
+    end
+
+    defp do_parse(
+           <<unquote(md), rest::binary>>,
+           %State{
+             mode: [{:linefeed, pos} | _],
+             path: [{tag, _, _} | _]
+           } = state
+         )
+         when tag in [unquote(first_inner_tag), unquote_splicing(tags)] do
+      state =
+        state
+        |> pop_mode([{:linefeed, pos}, :md])
+        |> rewind_state(until: unquote(inner), inclusive: true, trim: true)
+        |> push_path({unquote(inner), nil, []})
+        |> push_path({unquote(tag), nil, []})
+        |> push_mode(:md)
+
+      do_parse(rest, state)
+    end
+
+    defp do_parse(
+           <<unquote(md), rest::binary>>,
+           %State{path: [{tag, _, _} | _]} = state
+         )
+         when tag in [unquote(first_inner_tag), unquote_splicing(tags)] do
+      state =
+        state
+        |> to_ast()
+        |> push_path({tag, nil, []})
+
+      do_parse(rest, state)
+    end
+
+    defp do_parse(<<unquote(md), rest::binary>>, state_linefeed()) do
+      state =
+        state
+        |> pop_mode([{:linefeed, pos}, :md])
+        |> listener({:tag, {unquote(md), unquote(outer)}, true})
+        |> listener({:tag, {unquote(md), unquote(first_inner_tag)}, true})
+        |> push_path({unquote(outer), unquote(attrs), []})
+        |> push_path({unquote(inner), nil, []})
+        |> push_path({unquote(first_inner_tag), nil, []})
+        |> push_mode(:md)
+
+      do_parse(rest, state)
+    end
+  end)
+
   disclosure_range = Map.get(@syntax[:settings], :disclosure_range, @disclosure_range)
 
   Enum.each(@syntax[:disclosure], fn {md, properties} ->
@@ -241,14 +321,11 @@ defmodule Md.Parser.Default do
              } = state
            )
            when length(deferreds) > 0 do
-        IO.inspect({disclosure, deferreds, state}, label: "★★★")
-
         if disclosure in deferreds do
           state =
             state
             |> replace_mode({:inner, :raw})
             |> push_path({:__deferred__, disclosure, []})
-            |> IO.inspect(label: "☆1☆")
 
           do_parse(rest, state)
         else
@@ -259,7 +336,6 @@ defmodule Md.Parser.Default do
             |> pop_mode([{:linefeed, pos}, :md])
             |> push_mode({:linefeed, pos})
             |> push_char(c)
-            |> IO.inspect(label: "☆2☆")
 
           do_parse(rest, state)
         end
@@ -275,7 +351,6 @@ defmodule Md.Parser.Default do
          )
          when is_raw(mode) do
       deferred = [{disclosure, content} | state.bag.deferred]
-      IO.inspect({deferred, state}, label: "DEF")
 
       state =
         %State{state | bag: Map.put(state.bag, :deferred, deferred), path: path}
@@ -330,7 +405,6 @@ defmodule Md.Parser.Default do
 
       state =
         %State{state | bag: %{state.bag | deferred: [stock | state.bag.deferred], stock: []}}
-        |> IO.inspect(label: "OOOOO")
         |> push_path(transformed)
         |> to_ast()
         |> listener({:tag, {unquote(md), :magnet}, nil})
@@ -340,7 +414,7 @@ defmodule Md.Parser.Default do
     end
   end)
 
-  defp do_parse(<<x::utf8, rest::binary>>, state()) when is_magnet(mode) do
+  defp do_parse(<<x::utf8, rest::binary>>, state(:magnet)) do
     [stock, md] = state.bag.stock
 
     state = %State{state | bag: %{state.bag | stock: [stock <> <<x::utf8>>, md]}}
@@ -536,7 +610,7 @@ defmodule Md.Parser.Default do
     state =
       state
       |> listener(:break)
-      |> rewind_state()
+      |> rewind_state(trim: true)
       |> set_mode({:linefeed, 0})
 
     do_parse(rest, state)
@@ -995,7 +1069,7 @@ defmodule Md.Parser.Default do
     state =
       state
       |> listener(:finalize)
-      |> rewind_state()
+      |> rewind_state(trim: true)
       |> apply_deferreds()
 
     state = %State{state | mode: [:finished], bag: %{state.bag | indent: [], stock: []}}
@@ -1084,6 +1158,7 @@ defmodule Md.Parser.Default do
 
   @spec rewind_state(L.state(), [
           {:until, L.element()}
+          | {:trim, boolean()}
           | {:count, pos_integer()}
           | {:inclusive, boolean()}
           | {:pop, %{required(atom()) => atom()}}
@@ -1091,16 +1166,28 @@ defmodule Md.Parser.Default do
   defp rewind_state(state, params \\ []) do
     pop = Keyword.get(params, :pop, %{})
     until = Keyword.get(params, :until, nil)
+    trim = Keyword.get(params, :trim, false)
     count = Keyword.get(params, :count, 1)
     inclusive = Keyword.get(params, :inclusive, false)
 
     for i <- 1..count, count > 0, reduce: state do
       acc ->
         state =
-          Enum.reduce_while(acc.path, acc, fn
-            {^until, _, _}, acc -> {:halt, acc}
-            _, acc -> {:cont, to_ast(acc, pop)}
+          acc.path
+          |> Enum.reduce_while({trim, acc}, fn
+            {^until, _, _}, acc ->
+              {:halt, acc}
+
+            {_, _, content}, {true, acc} ->
+              if Enum.all?(content, &is_binary/1) and
+                   content |> Enum.join() |> String.trim() == "",
+                 do: {:cont, {true, %State{acc | path: tl(acc.path)}}},
+                 else: {:cont, {false, to_ast(acc, pop)}}
+
+            _, {_, acc} ->
+              {:cont, {false, to_ast(acc, pop)}}
           end)
+          |> elem(1)
 
         if i < count or inclusive, do: to_ast(state, pop), else: state
     end
@@ -1114,7 +1201,6 @@ defmodule Md.Parser.Default do
       deferreds
       |> Enum.filter(&match?({_, _}, &1))
       |> Map.new()
-      |> IO.inspect()
 
     ast =
       Macro.prewalk(state.ast, fn

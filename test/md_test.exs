@@ -286,18 +286,54 @@ defmodule MdTest do
            ] == Md.parse(input).ast
   end
 
-  test "deferred footnotes" do
-    input = """
-    Hi, check[^1] this!
+  # test "deferred footnotes" do
+  #   input = """
+  #   Hi, check[^1] this!
 
-    [^1]: https://example.com
-    [^2]: https://example.com
+  #   [^1]: https://example.com
+  #   [^2]: https://example.com
+  #   """
+
+  #   assert [
+  #            {:p, nil, ["Hi,"]},
+  #            {:p, nil, ["check this ", {:a, %{href: " https://example.com"}, ["link"]}, "!"]},
+  #            {:p, nil, ["Another [text].", "\n", "\n", "[2]: https://example.com"]}
+  #          ] == Md.parse(input).ast
+  # end
+
+  test "tables" do
+    input = """
+    Hi,
+
+    | Item         | Price | # In stock |
+    |--------------|:-----:|-----------:|
+    | Juicy Apples |  1.99 |        739 |
+    | Bananas      |  1.89 |          6 |
     """
 
     assert [
              {:p, nil, ["Hi,"]},
-             {:p, nil, ["check this ", {:a, %{href: " https://example.com"}, ["link"]}, "!"]},
-             {:p, nil, ["Another [text].", "\n", "\n", "[2]: https://example.com"]}
+             {:table, nil,
+              [
+                {:tr, nil,
+                 [
+                   {:th, nil, [" Item         "]},
+                   {:th, nil, [" Price "]},
+                   {:th, nil, [" # In stock "]}
+                 ]},
+                {:tr, nil,
+                 [
+                   {:td, nil, [" Juicy Apples "]},
+                   {:td, nil, ["  1.99 "]},
+                   {:td, nil, ["        739 "]}
+                 ]},
+                {:tr, nil,
+                 [
+                   {:td, nil, [" Bananas      "]},
+                   {:td, nil, ["  1.89 "]},
+                   {:td, nil, ["          6 "]}
+                 ]}
+              ]}
            ] == Md.parse(input).ast
   end
 
