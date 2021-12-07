@@ -1,6 +1,6 @@
 # Md [![Kantox ❤ OSS](https://img.shields.io/badge/❤-kantox_oss-informational.svg)](https://kantox.com/)  ![Test](https://github.com/am-kantox/md/workflows/Test/badge.svg)  ![Dialyzer](https://github.com/am-kantox/md/workflows/Dialyzer/badge.svg)
 
-<img style="float: right, margin: 0 0 10px 10px" src="https://github.com/am-kantox/md/raw/master/stuff/logo-48x48.png" alt="MD Logo"/> **Stream markup parser, extendable, flexible, blazingly fast, with callbacks and more, ready for markdown…**
+<p><img style="float: right, margin: 0 0 10px 10px" src="https://github.com/am-kantox/md/raw/master/stuff/logo-48x48.png" alt="MD Logo"/> **Stream markup parser, extendable, flexible, blazingly fast, with callbacks and more, ready for markdown…**</p>
 
 ---
 
