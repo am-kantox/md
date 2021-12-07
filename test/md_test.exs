@@ -308,7 +308,7 @@ defmodule MdTest do
     | Item         | Price | # In stock |
     |--------------|:-----:|-----------:|
     | Juicy Apples |  1.99 |        739 |
-    | Bananas      |  1.89 |          6 |
+    | **Bananas**  |  1.89 |          6 |
     """
 
     assert [
@@ -329,7 +329,7 @@ defmodule MdTest do
                  ]},
                 {:tr, nil,
                  [
-                   {:td, nil, [" Bananas      "]},
+                   {:td, nil, [{:strong, %{class: "red"}, ["Bananas"]}, "  "]},
                    {:td, nil, ["  1.89 "]},
                    {:td, nil, ["          6 "]}
                  ]}
