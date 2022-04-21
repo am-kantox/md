@@ -110,7 +110,7 @@ defmodule Md.Parser.Default do
       ] ++ Enum.map(0..@ol_max, &{"#{&1}. ", %{tag: :li, outer: :ol}}),
     brace: [
       {"*", %{tag: :b}},
-      {"_", %{tag: :it}},
+      {"_", %{tag: :i}},
       {"**", %{tag: :strong, attributes: %{class: "red"}}},
       {"__", %{tag: :em}},
       {"~", %{tag: :s}},

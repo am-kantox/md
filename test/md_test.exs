@@ -12,7 +12,7 @@ defmodule MdTest do
                   "\n",
                   {:b, nil, ["foo ", {:strong, %{class: "red"}, ["bar baz "]}]}
                 ]},
-               {:p, nil, ["Answer: ", {:it, nil, ["42"]}, "."]}
+               {:p, nil, ["Answer: ", {:i, nil, ["42"]}, "."]}
              ]
            } = Md.parse("   he\\*llo \n  *foo **bar baz \n\n Answer: _42_.")
   end
@@ -371,7 +371,7 @@ defmodule MdTest do
                {:ul, nil,
                 [
                   {:li, nil, ["1 | ", {:b, nil, ["foo"]}, " foo"]},
-                  {:li, nil, ["1 | bar ", {:it, nil, ["bar"]}]},
+                  {:li, nil, ["1 | bar ", {:i, nil, ["bar"]}]},
                   {:ul, nil,
                    [
                      {:li, nil, ["2 | baz"]},

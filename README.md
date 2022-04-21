@@ -66,7 +66,7 @@ and its handling rules. Here is the excerpt from the default parser for `brace`s
 ```elixir
   brace: %{
     "*" => %{tag: :b},
-    "_" => %{tag: :it},
+    "_" => %{tag: :i},
     "**" => %{tag: :strong, attributes: %{class: "nota-bene"}},
     "__" => %{tag: :em},
     "~" => %{tag: :s},

@@ -27,7 +27,7 @@ defmodule Md do
       "<b>bold</b>"
 
       iex> Md.generate("It’s all *bold* and _italic_!", format: :none)
-      "<p>It’s all <b>bold</b> and <it>italic</it>!</p>"
+      "<p>It’s all <b>bold</b> and <i>italic</i>!</p>"
 
   """
   @impl Md.Parser
