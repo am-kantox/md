@@ -7,6 +7,38 @@ defmodule Md.Engine do
     Enum.reduce(tags, [], &[{:{}, [], [&1, us, us]} | &2])
   end
 
+  defmacro __before_compile__(_env) do
+    quote generated: true, location: :keep, context: __CALLER__.module do
+      Md.Engine.macros()
+      Md.Engine.init()
+      Md.Engine.skip()
+      Md.Engine.escape(@syntax[:escape])
+      Md.Engine.comment(@syntax[:comment])
+      Md.Engine.matrix(@syntax[:matrix])
+
+      Md.Engine.disclosure(
+        @syntax[:disclosure],
+        Map.get(@syntax[:settings], :disclosure_range, @disclosure_range)
+      )
+
+      Md.Engine.magnet(@syntax[:magnet])
+      Md.Engine.custom(@syntax[:custom])
+      Md.Engine.substitute(@syntax[:substitute])
+      Md.Engine.flush(@syntax[:flush])
+      Md.Engine.block(@syntax[:block])
+      Md.Engine.shift(@syntax[:shift])
+      Md.Engine.linefeed()
+      Md.Engine.linefeed_mode()
+      Md.Engine.pair(@syntax[:pair])
+      Md.Engine.paragraph(@syntax[:paragraph])
+      Md.Engine.list(@syntax[:list])
+      Md.Engine.brace(@syntax[:brace])
+      Md.Engine.plain()
+      Md.Engine.terminate()
+      Md.Engine.helpers()
+    end
+  end
+
   defmacro init do
     quote generated: true, location: :keep, context: __CALLER__.module do
       @spec do_parse(binary(), Md.Listener.state()) :: Md.Listener.state()

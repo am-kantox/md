@@ -44,11 +44,29 @@ defmodule Md.Parser do
 
   # TODO analyze errors
   @spec generate(binary() | L.state(), keyword()) :: binary()
-  def generate(input, options \\ [])
+  def generate(input, parser \\ DefaultParser, options \\ [])
 
-  def generate(input, options) when is_binary(input),
-    do: input |> DefaultParser.parse() |> elem(1) |> generate(options)
+  def generate(input, parser, options) when is_binary(input),
+    do: input |> parser.parse() |> elem(1) |> generate(parser, options)
 
-  def generate(%State{ast: ast}, options),
+  def generate(%State{ast: ast}, _parser, options),
     do: XmlBuilder.generate(ast, options)
+
+  @doc false
+  defmacro __using__(_opts \\ []) do
+    quote generated: true, location: :keep do
+      require Md.Engine
+      alias Md.Parser.State
+
+      @before_compile Md.Engine
+
+      @behaviour Md.Parser
+
+      @impl Md.Parser
+      def parse(input, state \\ %State{}) do
+        %State{ast: ast, path: []} = state = do_parse(input, state)
+        {"", %State{state | ast: Enum.reverse(ast)}}
+      end
+    end
+  end
 end

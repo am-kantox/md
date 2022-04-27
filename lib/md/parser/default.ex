@@ -1,11 +1,7 @@
 defmodule Md.Parser.Default do
   @moduledoc false
 
-  require Md.Engine
-
-  alias Md.Parser.State
-
-  @behaviour Md.Parser
+  use Md.Parser
 
   @ol_max Application.compile_env(:md, :ol_max, 10)
   @disclosure_range 3..5
@@ -134,38 +130,4 @@ defmodule Md.Parser.Default do
 
   @compile {:inline, syntax: 0}
   def syntax, do: @syntax
-
-  @impl Md.Parser
-  def parse(input, state \\ %State{}) do
-    %State{ast: ast, path: []} = state = do_parse(input, state)
-    {"", %State{state | ast: Enum.reverse(ast)}}
-  end
-
-  Md.Engine.macros()
-  Md.Engine.init()
-  Md.Engine.skip()
-  Md.Engine.escape(@syntax[:escape])
-  Md.Engine.comment(@syntax[:comment])
-  Md.Engine.matrix(@syntax[:matrix])
-
-  Md.Engine.disclosure(
-    @syntax[:disclosure],
-    Map.get(@syntax[:settings], :disclosure_range, @disclosure_range)
-  )
-
-  Md.Engine.magnet(@syntax[:magnet])
-  Md.Engine.custom(@syntax[:custom])
-  Md.Engine.substitute(@syntax[:substitute])
-  Md.Engine.flush(@syntax[:flush])
-  Md.Engine.block(@syntax[:block])
-  Md.Engine.shift(@syntax[:shift])
-  Md.Engine.linefeed()
-  Md.Engine.linefeed_mode()
-  Md.Engine.pair(@syntax[:pair])
-  Md.Engine.paragraph(@syntax[:paragraph])
-  Md.Engine.list(@syntax[:list])
-  Md.Engine.brace(@syntax[:brace])
-  Md.Engine.plain()
-  Md.Engine.terminate()
-  Md.Engine.helpers()
 end
