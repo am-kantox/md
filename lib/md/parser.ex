@@ -26,50 +26,8 @@ defmodule Md.Parser do
   as a tuple.
   """
   alias Md.Listener, as: L
+  alias Md.Parser.State
   alias Md.Parser.Default, as: DefaultParser
-
-  defmodule State do
-    @moduledoc """
-    The internal state of the parser.
-    """
-    defstruct path: [],
-              ast: [],
-              mode: [:idle],
-              listener: nil,
-              bag: %{indent: [], stock: [], deferred: []}
-
-    defimpl Inspect do
-      @moduledoc false
-      import Inspect.Algebra
-
-      @spec inspect(L.state(), Inspect.Opts.t()) ::
-              :doc_line
-              | :doc_nil
-              | binary
-              | {:doc_collapse, pos_integer}
-              | {:doc_force, any}
-              | {:doc_break | :doc_color | :doc_cons | :doc_fits | :doc_group | :doc_string, any,
-                 any}
-              | {:doc_nest, any, :cursor | :reset | non_neg_integer, :always | :break}
-      def inspect(
-            %State{
-              path: path,
-              ast: ast,
-              mode: mode,
-              bag: %{indent: indent, stock: stock, deferred: deferred}
-            },
-            opts
-          ) do
-        inner = [
-          path: path,
-          ast: ast,
-          internals: [mode: mode, indent: indent, stock: stock, deferred: deferred]
-        ]
-
-        concat(["#Md<", to_doc(inner, opts), ">"])
-      end
-    end
-  end
 
   @typedoc """
   The type to be used in all the intermediate states of parsing.
