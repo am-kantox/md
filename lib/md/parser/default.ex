@@ -1,15 +1,11 @@
 defmodule Md.Parser.Default do
   @moduledoc false
 
-  import Md.Utils
   require Md.Engine
 
-  alias Md.Listener, as: L
   alias Md.Parser.State
 
   @behaviour Md.Parser
-
-  require Application
 
   @ol_max Application.compile_env(:md, :ol_max, 10)
   @disclosure_range 3..5
@@ -144,9 +140,6 @@ defmodule Md.Parser.Default do
     %State{ast: ast, path: []} = state = do_parse(input, state)
     {"", %State{state | ast: Enum.reverse(ast)}}
   end
-
-  @spec do_parse(binary(), L.state()) :: L.state()
-  defp do_parse(input, state)
 
   Md.Engine.macros()
   Md.Engine.init()

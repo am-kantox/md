@@ -1,7 +1,17 @@
 defmodule Md.Engine do
   @moduledoc false
+
+  @spec closing_match(Md.Listener.branch()) :: Macro.t()
+  def closing_match(tags) do
+    us = Macro.var(:_, %Macro.Env{}.context)
+    Enum.reduce(tags, [], &[{:{}, [], [&1, us, us]} | &2])
+  end
+
   defmacro init do
     quote generated: true, location: :keep, context: __CALLER__.module do
+      @spec do_parse(binary(), Md.Listener.state()) :: Md.Listener.state()
+      defp do_parse(input, state)
+
       defp do_parse(input, initial()) do
         state =
           state
@@ -374,7 +384,7 @@ defmodule Md.Engine do
         attrs = Macro.escape(properties[:attributes])
         pop = Macro.escape(properties[:pop])
 
-        closing_match = closing_match(tags)
+        closing_match = Md.Engine.closing_match(tags)
 
         defp do_parse(<<unquote(md), rest::binary>>, state_linefeed()) do
           state =
@@ -412,7 +422,7 @@ defmodule Md.Engine do
         mode = properties[:mode]
         attrs = Macro.escape(properties[:attributes])
 
-        closing_match = closing_match(tags)
+        closing_match = Md.Engine.closing_match(tags)
 
         defp do_parse(
                <<unquote(md), rest::binary>>,
@@ -775,7 +785,7 @@ defmodule Md.Engine do
         mode = Macro.escape(Map.get(properties, :mode, {:nested, tag, 1}))
         attrs = Macro.escape(properties[:attributes])
 
-        closing_match = closing_match(tags)
+        closing_match = Md.Engine.closing_match(tags)
 
         defp do_parse(<<unquote(md), rest::binary>>, empty({:linefeed, _pos})) do
           state =
@@ -986,7 +996,7 @@ defmodule Md.Engine do
         mode = properties[:mode]
         attrs = Macro.escape(properties[:attributes])
         closing = Map.get(properties, :closing, md)
-        closing_match = closing_match(tags)
+        closing_match = Md.Engine.closing_match(tags)
 
         defp do_parse(
                <<unquote(closing), rest::binary>>,
@@ -1105,7 +1115,7 @@ defmodule Md.Engine do
         end
       end
 
-      @spec push_char(L.state(), pos_integer() | binary()) :: L.state()
+      @spec push_char(Md.Listener.state(), pos_integer() | binary()) :: Md.Listener.state()
       defp push_char(state, x) when is_integer(x),
         do: push_char(state, <<x::utf8>>)
 
@@ -1142,7 +1152,7 @@ defmodule Md.Engine do
       end
 
       ## helpers
-      @spec listener(L.state(), L.context()) :: L.state()
+      @spec listener(Md.Listener.state(), Md.Listener.context()) :: Md.Listener.state()
       def listener(%Md.Parser.State{listener: nil} = state, _), do: state
 
       def listener(%Md.Parser.State{} = state, context) do
@@ -1152,20 +1162,21 @@ defmodule Md.Engine do
         end
       end
 
-      @spec level(L.state(), L.element()) :: non_neg_integer()
+      @spec level(Md.Listener.state(), Md.Listener.element()) :: non_neg_integer()
       defp level(state(), tag),
         do: Enum.count(state.path, &match?({^tag, _, _}, &1))
 
-      @spec set_mode(L.state(), L.parse_mode()) :: L.state()
+      @spec set_mode(Md.Listener.state(), Md.Listener.parse_mode()) :: Md.Listener.state()
       defp set_mode(state(), value), do: %Md.Parser.State{state | mode: [value]}
 
-      @spec replace_mode(L.state(), L.parse_mode() | nil) :: L.state()
+      @spec replace_mode(Md.Listener.state(), Md.Listener.parse_mode() | nil) ::
+              Md.Listener.state()
       defp replace_mode(state(), nil), do: state
 
       defp replace_mode(%Md.Parser.State{mode: [_ | modes]} = state, value),
         do: %Md.Parser.State{state | mode: [value | modes]}
 
-      @spec push_mode(L.state(), L.parse_mode()) :: L.state()
+      @spec push_mode(Md.Listener.state(), Md.Listener.parse_mode()) :: Md.Listener.state()
       defp push_mode(state(), nil), do: state
       defp push_mode(%Md.Parser.State{mode: [mode | _]} = state, mode), do: state
 
@@ -1173,11 +1184,12 @@ defmodule Md.Engine do
         do: %Md.Parser.State{state | mode: [value | state.mode]}
 
       # @dialyzer {:nowarn_function, pop_mode: 1, pop_mode: 2}
-      # @spec pop_mode(L.state()) :: L.state()
+      # @spec pop_mode(Md.Listener.state()) :: Md.Listener.state()
       # defp pop_mode(state()), do: %Md.Parser.State{state | mode: tl(state.mode)}
 
       @dialyzer {:nowarn_function, pop_mode: 2}
-      @spec pop_mode(L.state(), L.element() | [L.element()]) :: L.state()
+      @spec pop_mode(Md.Listener.state(), Md.Listener.element() | [Md.Listener.element()]) ::
+              Md.Listener.state()
       defp pop_mode(state(), modes) when is_list(modes) do
         {_, modes} = Enum.split_while(state.mode, &(&1 in modes))
         %Md.Parser.State{state | mode: modes}
@@ -1186,7 +1198,8 @@ defmodule Md.Engine do
       defp pop_mode(state(), mode), do: %Md.Parser.State{state | mode: tl(state.mode)}
       defp pop_mode(state(), _), do: state
 
-      @spec push_path(L.state(), L.branch() | [L.branch()]) :: L.state()
+      @spec push_path(Md.Listener.state(), Md.Listener.branch() | [Md.Listener.branch()]) ::
+              Md.Listener.state()
       defp push_path(state(), elements) when is_list(elements),
         do: Enum.reduce(elements, state, &push_path(&2, &1))
 
@@ -1197,13 +1210,13 @@ defmodule Md.Engine do
 
   defmacro helpers do
     quote do
-      @spec rewind_state(L.state(), [
-              {:until, L.element()}
+      @spec rewind_state(Md.Listener.state(), [
+              {:until, Md.Listener.element()}
               | {:trim, boolean()}
               | {:count, pos_integer()}
               | {:inclusive, boolean()}
               | {:pop, %{required(atom()) => atom()}}
-            ]) :: L.state()
+            ]) :: Md.Listener.state()
       defp rewind_state(state, params \\ []) do
         pop = Keyword.get(params, :pop, %{})
         until = Keyword.get(params, :until, nil)
@@ -1234,7 +1247,7 @@ defmodule Md.Engine do
         end
       end
 
-      @spec apply_deferreds(L.state()) :: L.state()
+      @spec apply_deferreds(Md.Listener.state()) :: Md.Listener.state()
       defp apply_deferreds(%Md.Parser.State{bag: %{deferred: []}} = state), do: state
 
       defp apply_deferreds(%Md.Parser.State{bag: %{deferred: deferreds}} = state) do
@@ -1264,7 +1277,8 @@ defmodule Md.Engine do
         %Md.Parser.State{state | ast: ast}
       end
 
-      @spec update_attrs(L.branch(), %{required(atom()) => atom()}) :: L.branch()
+      @spec update_attrs(Md.Listener.branch(), %{required(atom()) => atom()}) ::
+              Md.Listener.branch()
       defp update_attrs({_, _, []} = tag, _), do: tag
 
       defp update_attrs({_tag, _attrs, [value | _rest]} = tag, _pop)
@@ -1278,7 +1292,7 @@ defmodule Md.Engine do
         end
       end
 
-      @spec to_ast(L.state(), %{required(atom()) => atom()}) :: L.state()
+      @spec to_ast(Md.Listener.state(), %{required(atom()) => atom()}) :: Md.Listener.state()
       defp to_ast(state, pop \\ %{})
       defp to_ast(%Md.Parser.State{path: []} = state, _), do: state
 
@@ -1312,10 +1326,10 @@ defmodule Md.Engine do
         listener(state, {:tag, tag, false})
       end
 
-      @spec reverse(L.trace()) :: L.trace()
+      @spec reverse(Md.Listener.trace()) :: Md.Listener.trace()
       defp reverse({_, _, branch} = trace) when is_list(branch), do: trim(trace, true)
 
-      @spec trim(L.trace(), boolean()) :: L.trace()
+      @spec trim(Md.Listener.trace(), boolean()) :: Md.Listener.trace()
       defp trim(trace, reverse?)
 
       defp trim({elem, attrs, [<<?\n>> | rest]}, reverse?),
