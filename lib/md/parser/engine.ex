@@ -1194,4 +1194,138 @@ defmodule Md.Engine do
         do: %Md.Parser.State{state | path: [element | path]}
     end
   end
+
+  defmacro helpers do
+    quote do
+      @spec rewind_state(L.state(), [
+              {:until, L.element()}
+              | {:trim, boolean()}
+              | {:count, pos_integer()}
+              | {:inclusive, boolean()}
+              | {:pop, %{required(atom()) => atom()}}
+            ]) :: L.state()
+      defp rewind_state(state, params \\ []) do
+        pop = Keyword.get(params, :pop, %{})
+        until = Keyword.get(params, :until, nil)
+        trim = Keyword.get(params, :trim, false)
+        count = Keyword.get(params, :count, 1)
+        inclusive = Keyword.get(params, :inclusive, false)
+
+        for i <- 1..count, count > 0, reduce: state do
+          acc ->
+            state =
+              acc.path
+              |> Enum.reduce_while({trim, acc}, fn
+                {^until, _, _}, acc ->
+                  {:halt, acc}
+
+                {_, _, content}, {true, acc} ->
+                  if Enum.all?(content, &is_binary/1) and
+                       content |> Enum.join() |> String.trim() == "",
+                     do: {:cont, {true, %Md.Parser.State{acc | path: tl(acc.path)}}},
+                     else: {:cont, {false, to_ast(acc, pop)}}
+
+                _, {_, acc} ->
+                  {:cont, {false, to_ast(acc, pop)}}
+              end)
+              |> elem(1)
+
+            if i < count or inclusive, do: to_ast(state, pop), else: state
+        end
+      end
+
+      @spec apply_deferreds(L.state()) :: L.state()
+      defp apply_deferreds(%Md.Parser.State{bag: %{deferred: []}} = state), do: state
+
+      defp apply_deferreds(%Md.Parser.State{bag: %{deferred: deferreds}} = state) do
+        deferreds =
+          deferreds
+          |> Enum.filter(&match?({_, _}, &1))
+          |> Map.new()
+
+        ast =
+          Macro.prewalk(state.ast, fn
+            {tag,
+             %{__deferred__: %{attribute: attribute, content: mark, kind: :attribute}} = attrs,
+             content} ->
+              value = Map.get(deferreds, mark, content)
+
+              attrs =
+                attrs
+                |> Map.delete(:__deferred__)
+                |> Map.put(attribute, value)
+
+              {tag, attrs, content}
+
+            other ->
+              other
+          end)
+
+        %Md.Parser.State{state | ast: ast}
+      end
+
+      @spec update_attrs(L.branch(), %{required(atom()) => atom()}) :: L.branch()
+      defp update_attrs({_, _, []} = tag, _), do: tag
+
+      defp update_attrs({_tag, _attrs, [value | _rest]} = tag, _pop)
+           when value in ["", "\n", "\s"],
+           do: tag
+
+      defp update_attrs({tag, attrs, [value | rest]} = full_tag, pop) do
+        case pop do
+          %{^tag => attr} -> {tag, Map.put(attrs || %{}, attr, value), rest}
+          _ -> full_tag
+        end
+      end
+
+      @spec to_ast(L.state(), %{required(atom()) => atom()}) :: L.state()
+      defp to_ast(state, pop \\ %{})
+      defp to_ast(%Md.Parser.State{path: []} = state, _), do: state
+
+      @empty_tags @syntax |> Keyword.get(:settings, []) |> Map.get(:empty_tags, [])
+      defp to_ast(%Md.Parser.State{path: [{tag, _, []} | rest]} = state, _)
+           when tag not in @empty_tags,
+           do: to_ast(%Md.Parser.State{state | path: rest})
+
+      defp to_ast(%Md.Parser.State{path: [{tag, _, _} = last], ast: ast} = state, pop) do
+        last =
+          last
+          |> reverse()
+          |> update_attrs(pop)
+          |> trim(false)
+
+        state = %Md.Parser.State{state | path: [], ast: [last | ast]}
+        listener(state, {:tag, tag, false})
+      end
+
+      defp to_ast(
+             %Md.Parser.State{path: [{tag, _, _} = last, {elem, attrs, branch} | rest]} = state,
+             pop
+           ) do
+        last =
+          last
+          |> reverse()
+          |> update_attrs(pop)
+          |> trim(false)
+
+        state = %Md.Parser.State{state | path: [{elem, attrs, [last | branch]} | rest]}
+        listener(state, {:tag, tag, false})
+      end
+
+      @spec reverse(L.trace()) :: L.trace()
+      defp reverse({_, _, branch} = trace) when is_list(branch), do: trim(trace, true)
+
+      @spec trim(L.trace(), boolean()) :: L.trace()
+      defp trim(trace, reverse?)
+
+      defp trim({elem, attrs, [<<?\n>> | rest]}, reverse?),
+        do: trim({elem, attrs, rest}, reverse?)
+
+      defp trim({elem, attrs, [<<?\s>> | rest]}, reverse?),
+        do: trim({elem, attrs, rest}, reverse?)
+
+      defp trim({elem, attrs, branch}, reverse?),
+        do: if(reverse?, do: {elem, attrs, Enum.reverse(branch)}, else: {elem, attrs, branch})
+    end
+  end
 end
