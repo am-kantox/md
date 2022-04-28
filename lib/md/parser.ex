@@ -26,8 +26,8 @@ defmodule Md.Parser do
   as a tuple.
   """
   alias Md.Listener, as: L
-  alias Md.Parser.State
   alias Md.Parser.Default, as: DefaultParser
+  alias Md.Parser.State
 
   @typedoc """
   The type to be used in all the intermediate states of parsing.

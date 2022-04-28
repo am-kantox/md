@@ -1,4 +1,4 @@
-defmodule MdParserTest do
+defmodule Md.Parser.Test do
   use ExUnit.Case
 
   doctest Md.Parser

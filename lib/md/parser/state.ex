@@ -12,7 +12,7 @@ defmodule Md.Parser.State do
     @moduledoc false
     import Inspect.Algebra
 
-    @spec inspect(L.state(), Inspect.Opts.t()) ::
+    @spec inspect(Md.Listener.state(), Inspect.Opts.t()) ::
             :doc_line
             | :doc_nil
             | binary

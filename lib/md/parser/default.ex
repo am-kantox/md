@@ -1,5 +1,17 @@
 defmodule Md.Parser.Default do
-  @moduledoc false
+  @moduledoc """
+  Default parser with all the features included.
+
+  Supports a wide subset of markdown, including but not limited to:
+
+  - bold/italic/strikeout/etc text decorations
+  - comments
+  - code blocks
+  - tables
+  - twitter handlers etc
+
+  Might be a good start for those who just needs a fast markdown processing.
+  """
 
   use Md.Parser
 
@@ -19,7 +31,4 @@ defmodule Md.Parser.Default do
             {k, v} ->
               {k, v}
           end)
-
-  @compile {:inline, syntax: 0}
-  def syntax, do: @syntax
 end

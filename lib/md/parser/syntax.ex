@@ -5,10 +5,10 @@ defmodule Md.Parser.Syntax do
 
   @typedoc "Settings for the parser"
   @type settings :: %{
-          outer: atom(),
-          span: atom(),
-          disclosure_range: Range.t(),
-          empty_tags: [atom()]
+          optional(:outer) => atom(),
+          optional(:span) => atom(),
+          optional(:disclosure_range) => Range.t(),
+          optional(:empty_tags) => [atom()]
         }
 
   @typedoc "Syntax item definition"

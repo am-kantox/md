@@ -1,11 +1,16 @@
 defmodule Md.Parser.Syntax.Void do
-  @moduledoc false
+  @moduledoc """
+  Void syntax to be extended by custom implementations. Included for convenience.
+  """
 
   alias Md.Parser.Syntax
 
   @behaviour Syntax
 
   @impl Syntax
+  @doc """
+  Returns default values for outer tag, span tag and empty tags.
+  """
   def settings do
     %{
       outer: :p,
@@ -15,6 +20,7 @@ defmodule Md.Parser.Syntax.Void do
   end
 
   @impl Syntax
+  @doc "Empty syntax"
   def syntax,
     do: Syntax.types() |> Enum.zip(Stream.cycle([[]])) |> Map.new()
 end

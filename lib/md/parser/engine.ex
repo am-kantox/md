@@ -7,7 +7,17 @@ defmodule Md.Engine do
     Enum.reduce(tags, [], &[{:{}, [], [&1, us, us]} | &2])
   end
 
-  defmacro __before_compile__(_env) do
+  defmacro __before_compile__(env) do
+    env.module
+    |> Module.get_attribute(:syntax)
+    |> is_nil()
+    |> if(
+      do:
+        raise(CompileError,
+          description: "`@syntax` must be set or passed to `use Md.Parser` as `syntax:`"
+        )
+    )
+
     quote generated: true, location: :keep, context: __CALLER__.module do
       Md.Engine.macros()
       Md.Engine.init()
@@ -36,6 +46,9 @@ defmodule Md.Engine do
       Md.Engine.plain()
       Md.Engine.terminate()
       Md.Engine.helpers()
+
+      @compile {:inline, syntax: 0}
+      def syntax, do: @syntax
     end
   end
 

@@ -2,6 +2,7 @@ defmodule Md.Parser.Syntax.Default do
   @moduledoc false
 
   alias Md.Parser.{Syntax, Syntax.Void}
+  alias Md.Transforms.{Anchor, Footnote, TwitterHandle}
 
   @behaviour Syntax
 
@@ -37,9 +38,9 @@ defmodule Md.Parser.Syntax.Default do
         {"  \n", %{tag: :br}}
       ],
       magnet: [
-        {"⚓", %{transform: Md.Transforms.Anchor}},
-        {"[^", %{transform: Md.Transforms.Footnote, terminators: [?\]], greedy: true}},
-        {"@", %{transform: &Md.Transforms.TwitterHandle.apply/2}}
+        {"⚓", %{transform: Anchor}},
+        {"[^", %{transform: Footnote, terminators: [?\]], greedy: true}},
+        {"@", %{transform: &TwitterHandle.apply/2}}
       ],
       block: [
         {"```", %{tag: [:pre, :code], mode: :raw, pop: %{code: :class}}}
