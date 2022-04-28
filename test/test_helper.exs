@@ -1,5 +1,7 @@
 defmodule MyDSLParser do
-  use Md.Parser, dsl: true
+  @my_syntax %{brace: [{"***", %{tag: "u"}}]}
+
+  use Md.Parser, syntax: @my_syntax
   import Md.Parser.DSL
 
   comment "<!--", %{closing: "-->"}

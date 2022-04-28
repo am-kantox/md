@@ -115,8 +115,21 @@ defmodule MyParser do
 end
 ```
 
-Currently `@syntax` module attribute must be declared, in the next versions two other
-ways of specifying syntax will be supported:
+`@syntax` module attribute must be declared, or DSL used as shown below
+(declarations), or an argument in a call to `use Md.Parser`.
+The separate declarations will be collected and merged.
+
+```elixir
+defmodule MyDSLParser do
+  @my_syntax %{brace: [{"***", %{tag: "u"}}]}
+  
+  use Md.Parser, syntax: @my_syntax
+  import Md.Parser.DSL
+
+  comment "<!--", %{closing: "-->"}
+  ...
+end
+```
 
 - a parameter to `use Md.Parser` as `use Md.Parser, syntax: map()`
 - a DSL like `paragraph {"#", %{tag: :h1}}`.

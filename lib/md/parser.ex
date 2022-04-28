@@ -63,12 +63,11 @@ defmodule Md.Parser do
       if Keyword.get(unquote(opts), :dsl, false),
         do: require Md.Parser.DSL
 
-      syntax = Module.get_attribute(__MODULE__, :syntax)
-      Module.register_attribute(__MODULE__, :syntax, accumulate: true)
-      Module.get_attribute(__MODULE__, :syntax)
+      syntax = Module.get_attribute(__MODULE__, :syntax, %{})
+      inplace_syntax = Keyword.get(unquote(opts), :syntax, %{})
 
-      if not is_nil(syntax),
-        do: Module.put_attribute(__MODULE__, :syntax, syntax)
+      Module.register_attribute(__MODULE__, :syntax, accumulate: true)
+      Module.put_attribute(__MODULE__, :syntax, Map.merge(syntax, inplace_syntax))
 
       @behaviour Md.Parser
 

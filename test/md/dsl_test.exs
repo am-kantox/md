@@ -4,5 +4,6 @@ defmodule Md.DSL.Test do
 
   test "correctly handles DSL" do
     assert MyDSLParser.syntax()[:comment] == [{"<!--", %{closing: "-->"}}]
+    assert MyDSLParser.syntax()[:brace] == [{"***", %{tag: "u"}}]
   end
 end

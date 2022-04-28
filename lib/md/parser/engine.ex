@@ -10,7 +10,7 @@ defmodule Md.Engine do
   defmacro __before_compile__(env) do
     env.module
     |> Module.get_attribute(:syntax)
-    |> Kernel.==([])
+    |> Kernel.==([%{}])
     |> if(
       do:
         raise(CompileError,
