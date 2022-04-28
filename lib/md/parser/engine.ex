@@ -18,7 +18,7 @@ defmodule Md.Engine do
 
       Md.Engine.disclosure(
         @syntax[:disclosure],
-        Map.get(@syntax[:settings], :disclosure_range, @disclosure_range)
+        Map.get(@syntax[:settings], :disclosure_range, 3..5)
       )
 
       Md.Engine.magnet(@syntax[:magnet])
