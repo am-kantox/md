@@ -78,10 +78,54 @@ and its handling rules. Here is the excerpt from the default parser for `brace`s
 For more examples of what properties are allowed for each kind of handlers,
 see the sources (ATM.)
 
+## Predefined parsers
+
+`Md` comes with a generic predefined parser `Md.Parser.Default`, which includes
+all the markup currently supported by `Md`.
+
+Custom parser definition would be usually based on `Md.Parser.Syntax.Void` syntax
+as shown below
+
+```elixir
+defmodule MyParser do
+  use Md.Parser
+
+  alias Md.Parser.Syntax.Void
+
+  @default_syntax Map.put(Void.syntax(), :settings, Void.settings())
+  @syntax @default_syntax |> Map.merge(%{
+    comment: [{"<!--", %{closing: "-->"}}],
+    paragraph: [
+      {"##", %{tag: :h2}},
+      {"###", %{tag: :h3}},
+      {">", %{tag: :blockquote}}
+    ],
+    list:
+      [
+        {"- ", %{tag: :li, outer: :ul}},
+        {"+ ", %{tag: :li, outer: :ol}}
+      ]
+    brace: [
+      {"*", %{tag: :b}},
+      {"_", %{tag: :i}},
+      {"~", %{tag: :s}},
+      {"`", %{tag: :code, mode: :raw, attributes: %{class: "code-inline"}}}
+    ]
+  })
+end
+```
+
+Currently `@syntax` module attribute must be declared, in the next versions two other
+ways of specifying syntax will be supported:
+
+- a parameter to `use Md.Parser` as `use Md.Parser, syntax: map()`
+- a DSL like `paragraph {"#", %{tag: :h1}}`.
+
 ---
 
 ## Changelog
 
+- **`0.4.0`** configurable syntax
 - **`0.3.0`** relaxed support for comments and tables
 - **`0.2.1`** deferred references like in `[link][1]` followed by `[1]: https://example.com` somewhere
 - **`0.2.0`** PoC, most of reasonable markdown is supported

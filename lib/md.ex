@@ -26,7 +26,7 @@ defmodule Md do
       iex> Regex.replace(~r/\\s+/, Md.generate("*bold*"), "")
       "<b>bold</b>"
 
-      iex> Md.generate("It’s all *bold* and _italic_!", format: :none)
+      iex> Md.generate("It’s all *bold* and _italic_!", Md.Parser.Default, format: :none)
       "<p>It’s all <b>bold</b> and <i>italic</i>!</p>"
 
   """
@@ -35,5 +35,5 @@ defmodule Md do
     do: with({"", state} <- Parser.parse(input, state), do: state)
 
   defdelegate generate(input), to: Md.Parser
-  defdelegate generate(input, options), to: Md.Parser
+  defdelegate generate(input, parser, options), to: Md.Parser
 end

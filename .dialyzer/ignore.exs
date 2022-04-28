@@ -1,5 +1,3 @@
 [
-  {"lib/md/parser/default.ex", :pattern_match},
-  {"lib/md/parser/default.ex", :call},
-  {"lib/md/parser/default.ex", :pattern_match_cov}
+  {"lib/md/parser/engine.ex", :pattern_match, 1}
 ]
