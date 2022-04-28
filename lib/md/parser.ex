@@ -61,7 +61,7 @@ defmodule Md.Parser do
       @before_compile Md.Engine
 
       if Keyword.get(unquote(opts), :dsl, false),
-        do: require Md.Parser.DSL
+        do: require(Md.Parser.DSL)
 
       syntax = Module.get_attribute(__MODULE__, :syntax, %{})
       inplace_syntax = Keyword.get(unquote(opts), :syntax, %{})
