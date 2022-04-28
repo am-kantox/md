@@ -60,6 +60,13 @@ defmodule Md.Parser do
 
       @before_compile Md.Engine
 
+      syntax = Module.get_attribute(__MODULE__, :syntax)
+      Module.register_attribute(__MODULE__, :syntax, accumulate: true)
+      Module.get_attribute(__MODULE__, :syntax)
+
+      if not is_nil(syntax),
+        do: Module.put_attribute(__MODULE__, :syntax, syntax)
+
       @behaviour Md.Parser
 
       @impl Md.Parser

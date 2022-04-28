@@ -10,7 +10,7 @@ defmodule Md.Engine do
   defmacro __before_compile__(env) do
     env.module
     |> Module.get_attribute(:syntax)
-    |> is_nil()
+    |> Kernel.==([])
     |> if(
       do:
         raise(CompileError,
@@ -19,36 +19,57 @@ defmodule Md.Engine do
     )
 
     quote generated: true, location: :keep, context: __CALLER__.module do
+      syntax =
+        @syntax
+        |> Enum.reduce(
+          &(&1
+            |> Map.new()
+            |> Map.merge(&2, fn _, v, v_acc ->
+              v_acc ++ v
+            end))
+        )
+        |> Enum.map(fn
+          {k, v} when is_list(v) ->
+            {k, v |> Enum.uniq_by(&elem(&1, 0)) |> Enum.sort_by(&(-String.length(elem(&1, 0))))}
+
+          {k, v} ->
+            {k, v}
+        end)
+
+      Module.delete_attribute(__MODULE__, :syntax)
+      Module.register_attribute(__MODULE__, :final_syntax, accumulate: false)
+      Module.put_attribute(__MODULE__, :final_syntax, syntax)
+
       Md.Engine.macros()
       Md.Engine.init()
       Md.Engine.skip()
-      Md.Engine.escape(@syntax[:escape])
-      Md.Engine.comment(@syntax[:comment])
-      Md.Engine.matrix(@syntax[:matrix])
+      Md.Engine.escape(@final_syntax[:escape])
+      Md.Engine.comment(@final_syntax[:comment])
+      Md.Engine.matrix(@final_syntax[:matrix])
 
       Md.Engine.disclosure(
-        @syntax[:disclosure],
-        Map.get(@syntax[:settings], :disclosure_range, 3..5)
+        @final_syntax[:disclosure],
+        Map.get(@final_syntax[:settings], :disclosure_range, 3..5)
       )
 
-      Md.Engine.magnet(@syntax[:magnet])
-      Md.Engine.custom(@syntax[:custom])
-      Md.Engine.substitute(@syntax[:substitute])
-      Md.Engine.flush(@syntax[:flush])
-      Md.Engine.block(@syntax[:block])
-      Md.Engine.shift(@syntax[:shift])
+      Md.Engine.magnet(@final_syntax[:magnet])
+      Md.Engine.custom(@final_syntax[:custom])
+      Md.Engine.substitute(@final_syntax[:substitute])
+      Md.Engine.flush(@final_syntax[:flush])
+      Md.Engine.block(@final_syntax[:block])
+      Md.Engine.shift(@final_syntax[:shift])
       Md.Engine.linefeed()
       Md.Engine.linefeed_mode()
-      Md.Engine.pair(@syntax[:pair])
-      Md.Engine.paragraph(@syntax[:paragraph])
-      Md.Engine.list(@syntax[:list])
-      Md.Engine.brace(@syntax[:brace])
+      Md.Engine.pair(@final_syntax[:pair])
+      Md.Engine.paragraph(@final_syntax[:paragraph])
+      Md.Engine.list(@final_syntax[:list])
+      Md.Engine.brace(@final_syntax[:brace])
       Md.Engine.plain()
       Md.Engine.terminate()
       Md.Engine.helpers()
 
       @compile {:inline, syntax: 0}
-      def syntax, do: @syntax
+      def syntax, do: @final_syntax
     end
   end
 
@@ -140,7 +161,7 @@ defmodule Md.Engine do
           location: :keep,
           bind_quoted: [matrices: matrices],
           context: __CALLER__.module do
-      Enum.each(@syntax[:matrix], fn {md, properties} ->
+      Enum.each(matrices, fn {md, properties} ->
         skip = Map.get(properties, :skip)
         outer = Map.get(properties, :outer, md)
         inner = Map.get(properties, :inner, outer)
@@ -213,7 +234,7 @@ defmodule Md.Engine do
           location: :keep,
           bind_quoted: [disclosures: disclosures, disclosure_range: disclosure_range],
           context: __CALLER__.module do
-      Enum.each(@syntax[:disclosure], fn {md, properties} ->
+      Enum.each(disclosures, fn {md, properties} ->
         until = Map.get(properties, :until, :eol)
 
         until =
@@ -1341,7 +1362,7 @@ defmodule Md.Engine do
       defp to_ast(state, pop \\ %{})
       defp to_ast(%Md.Parser.State{path: []} = state, _), do: state
 
-      @empty_tags @syntax |> Keyword.get(:settings, []) |> Map.get(:empty_tags, [])
+      @empty_tags @final_syntax |> Keyword.get(:settings, []) |> Map.get(:empty_tags, [])
       defp to_ast(%Md.Parser.State{path: [{tag, _, []} | rest]} = state, _)
            when tag not in @empty_tags,
            do: to_ast(%Md.Parser.State{state | path: rest})
