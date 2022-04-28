@@ -53,12 +53,15 @@ defmodule Md.Parser do
     do: XmlBuilder.generate(ast, options)
 
   @doc false
-  defmacro __using__(_opts \\ []) do
+  defmacro __using__(opts \\ []) do
     quote generated: true, location: :keep do
       require Md.Engine
       alias Md.Parser.State
 
       @before_compile Md.Engine
+
+      if Keyword.get(unquote(opts), :dsl, false),
+        do: require Md.Parser.DSL
 
       syntax = Module.get_attribute(__MODULE__, :syntax)
       Module.register_attribute(__MODULE__, :syntax, accumulate: true)
