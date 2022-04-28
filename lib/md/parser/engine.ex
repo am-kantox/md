@@ -22,11 +22,10 @@ defmodule Md.Engine do
       syntax =
         @syntax
         |> Enum.reduce(
+          Md.Parser.Syntax.Void.syntax(),
           &(&1
             |> Map.new()
-            |> Map.merge(&2, fn _, v, v_acc ->
-              v_acc ++ v
-            end))
+            |> Map.merge(&2, fn _, v, v_acc -> v_acc ++ v end))
         )
         |> Enum.map(fn
           {k, v} when is_list(v) ->
@@ -35,6 +34,7 @@ defmodule Md.Engine do
           {k, v} ->
             {k, v}
         end)
+        |> Keyword.put_new(:settings, Md.Parser.Syntax.Void.settings())
 
       Module.delete_attribute(__MODULE__, :syntax)
       Module.register_attribute(__MODULE__, :final_syntax, accumulate: false)
