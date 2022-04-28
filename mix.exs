@@ -98,7 +98,18 @@ defmodule Md.MixProject do
       logo: "stuff/logo-48x48.png",
       source_url: "https://github.com/am-kantox/#{@app}",
       extras: [],
-      groups_for_modules: []
+      groups_for_modules: [
+        # Md,
+        # Md.Listener,
+        # Md.Parser,
+
+        "Parser Internals": [
+          Md.Parser.Default,
+          Md.Parser.State,
+          Md.Parser.Syntax,
+          Md.Parser.Syntax.Void
+        ]
+      ]
     ]
   end
 end
