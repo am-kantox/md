@@ -19,7 +19,7 @@ custom handlers, allowing the on-fly modification of what’s currently being pr
 `Md` parses the incoming stream **once** and keeps the state, producing an AST
 of the input document. It has an ability to recover from errors collecting them.
 
-It currently does not support markdown tables (and I frankly doubt it ever will,)
+It currently does not support (and I frankly doubt it ever will)
 lists with embedded quotes, and other contrived syntax. If one needs to perfectly
 parse the common markdown, `Md` is probably not the correct choice.
 
