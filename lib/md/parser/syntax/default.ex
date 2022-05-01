@@ -114,6 +114,9 @@ defmodule Md.Parser.Syntax.Default do
         {"``", %{tag: :span, mode: :raw, attributes: %{class: "code-inline"}}},
         {"`", %{tag: :code, mode: :raw, attributes: %{class: "code-inline"}}},
         {"[^", %{closing: "]", tag: :b, mode: :raw}}
+      ],
+      tag: [
+        {"sup", %{}}
       ]
     }
   end

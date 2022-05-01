@@ -29,6 +29,7 @@ defmodule Md.Parser.Syntax do
           disclosure: [item()],
           paragraph: [item()],
           list: [item()],
+          tag: [item()],
           brace: [item()]
         }
 
@@ -53,6 +54,7 @@ defmodule Md.Parser.Syntax do
           | :disclosure
           | :paragraph
           | :list
+          | :tag
           | :brace
         ]
   def types do
@@ -70,6 +72,7 @@ defmodule Md.Parser.Syntax do
       :disclosure,
       :paragraph,
       :list,
+      :tag,
       :brace
     ]
   end

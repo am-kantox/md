@@ -67,6 +67,24 @@ defmodule MdTest do
     assert [{:p, nil, ["foo", {:br, nil, []}, "bar"]}] == Md.parse("foo  \nbar").ast
   end
 
+  test "brace" do
+    assert %Md.Parser.State{
+             mode: [:finished],
+             ast: [
+               {:p, nil, ["he", {:b, nil, ["llo"]}, " ", {:i, nil, ["kit"]}, "ty"]}
+             ]
+           } = Md.parse("   he*llo* _kit_ty")
+  end
+
+  test "tag" do
+    assert %Md.Parser.State{
+             mode: [:finished],
+             ast: [
+               {:p, nil, ["hello", {:sup, nil, ["2"]}]}
+             ]
+           } = Md.parse("   hello<sup>2</sup>")
+  end
+
   test "block" do
     input = """
     foo

@@ -45,6 +45,7 @@ There are several different syntax patterns recognizable by `Md`. Those are:
   `deferred` parameter provided
 - `paragraph` — a header, blockquote, or such, followed by a paragraph flow break
 - `list` — a list, like `- one\n-two`
+- `tag` — allowed tags (e. g. `<sup>2</sup>`)
 - `brace` — a most common markdown feature, like text decoration or such (e. g. `**bold**`)
 
 ## Syntax description
@@ -131,6 +132,8 @@ defmodule MyDSLParser do
 end
 ```
 
+Instead of `@syntax` module attribute, one might use
+
 - a parameter to `use Md.Parser` as `use Md.Parser, syntax: map()`
 - a DSL like `paragraph {"#", %{tag: :h1}}`.
 
@@ -138,7 +141,9 @@ end
 
 ## Changelog
 
-- **`0.4.0`** configurable syntax + DSL
+- **`0.6.0`** allow HTML tags (without attributes yet)
+- **`0.5.0`** DSL + `use Md.Parser, syntax: …`  for configurable syntax
+- **`0.4.0`** configurable syntax as `@syntax`
 - **`0.3.0`** relaxed support for comments and tables
 - **`0.2.1`** deferred references like in `[link][1]` followed by `[1]: https://example.com` somewhere
 - **`0.2.0`** PoC, most of reasonable markdown is supported

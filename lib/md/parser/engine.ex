@@ -45,6 +45,7 @@ defmodule Md.Engine do
       Md.Engine.macros()
       Md.Engine.init()
       Md.Engine.skip()
+      Md.Engine.tag(@final_syntax[:tag])
       Md.Engine.escape(@final_syntax[:escape])
       Md.Engine.comment(@final_syntax[:comment])
       Md.Engine.matrix(@final_syntax[:matrix])
@@ -1049,6 +1050,48 @@ defmodule Md.Engine do
         defp do_parse(<<unquote(md), _::binary>> = input, state_linefeed()) do
           state = rewind_state(state, until: unquote(tag))
           do_parse(input, state)
+        end
+      end)
+    end
+  end
+
+  defmacro tag(tags) do
+    quote generated: true,
+          location: :keep,
+          bind_quoted: [tags: tags],
+          context: __CALLER__.module do
+      Enum.each(tags, fn {md, properties} ->
+        [tag] =
+          tags = properties |> Map.get_lazy(:tag, fn -> String.to_atom(md) end) |> List.wrap()
+
+        mode = properties[:mode]
+        attrs = Macro.escape(properties[:attributes])
+        closing = Map.get(properties, :closing, "</#{tag}>")
+        closing_match = Md.Engine.closing_match(tags)
+
+        defp do_parse(
+               <<unquote(closing), rest::binary>>,
+               %Md.Parser.State{mode: [mode | _], path: [unquote_splicing(closing_match) | _]} =
+                 state
+             )
+             when mode == unquote(mode) or mode not in [:raw, {:inner, :raw}] do
+          state =
+            state
+            |> to_ast()
+            |> pop_mode(unquote(mode))
+
+          do_parse(rest, state)
+        end
+
+        defp do_parse(<<"<", unquote(md), ">", rest::binary>>, state())
+             when mode not in [:raw, {:inner, :raw}] do
+          state =
+            state
+            |> listener({:tag, {unquote(md), unquote(tag)}, true})
+            |> push_mode(unquote(mode))
+            |> push_path(for tag <- unquote(tags), do: {tag, unquote(attrs), []})
+
+          do_parse(rest, state)
         end
       end)
     end
