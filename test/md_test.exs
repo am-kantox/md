@@ -105,6 +105,17 @@ defmodule MdTest do
               ]}
            ] ==
              Md.parse(input).ast
+
+    input = """
+    ```
+    a
+    b
+    c
+    ```
+    """
+
+    assert "<pre><code>a\nb\nc</code></pre>" ==
+             Md.generate(input, Md.Parser.Default, format: :none)
   end
 
   test "codeblock" do
@@ -178,6 +189,22 @@ defmodule MdTest do
                 {:li, nil, ["1 | 2"]}
               ]}
            ] = Md.parse(input).ast
+  end
+
+  test "list from #12" do
+    input = ["- a - ", "- 1. ", "1. - "]
+
+    expectation = [
+      [{:ul, nil, [{:li, nil, ["a - "]}]}],
+      [{:ul, nil, [{:li, nil, ["1. "]}]}],
+      [{:ol, nil, [{:li, nil, ["- "]}]}]
+    ]
+
+    input
+    |> Enum.zip(expectation)
+    |> Enum.each(fn {input, expectation} ->
+      assert expectation == Md.parse(input).ast
+    end)
   end
 
   test "nested paragraph" do

@@ -971,11 +971,11 @@ defmodule Md.Engine do
                <<unquote(md), rest::binary>> = input,
                %Md.Parser.State{
                  mode: [mode | _],
-                 path: [{unquote(tag), _, _} | _],
+                 path: [{unquote(tag), _, _}, {unquote(outer), _, _} | _],
                  bag: %{indent: [indent | _] = indents}
                } = state
              )
-             when mode not in [:raw, {:inner, :raw}] do
+             when mode not in [:raw, {:inner, :raw}, :md] do
           case mode do
             {:linefeed, pos} ->
               state =
