@@ -43,10 +43,10 @@ defmodule Md.Parser.Syntax.Default do
         {"@", %{transform: &TwitterHandle.apply/2}}
       ],
       block: [
-        {"```", %{tag: [:pre, :code], mode: :raw, pop: %{code: :class}}}
+        {"```", %{tag: [:pre, :code], pop: %{code: :class}}}
       ],
       shift: [
-        {"    ", %{tag: [:div, :code], attributes: %{class: "pre"}, mode: {:inner, :raw}}}
+        {"    ", %{tag: [:div, :code], attributes: %{class: "pre"}}}
       ],
       pair: [
         {"![",

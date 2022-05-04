@@ -449,7 +449,7 @@ defmodule Md.Engine do
           context: __CALLER__.module do
       Enum.each(blocks, fn {md, properties} ->
         [tag | _] = tags = List.wrap(properties[:tag])
-        mode = properties[:mode]
+        mode = Map.get(properties, :mode, :raw)
         attrs = Macro.escape(properties[:attributes])
         pop = Macro.escape(properties[:pop])
 
@@ -488,7 +488,7 @@ defmodule Md.Engine do
           context: __CALLER__.module do
       Enum.each(shifts, fn {md, properties} ->
         [tag | _] = tags = List.wrap(properties[:tag])
-        mode = properties[:mode]
+        mode = Map.get(properties, :mode, {:inner, :raw})
         attrs = Macro.escape(properties[:attributes])
 
         closing_match = Md.Engine.closing_match(tags)
@@ -678,16 +678,31 @@ defmodule Md.Engine do
         defp do_parse(
                <<unquote(closing), unquote(inner_opening), rest::binary>>,
                %Md.Parser.State{
-                 mode: [mode | _],
+                 mode: [mode | _] = modes,
                  path: [{unquote(tag), attrs, content} | path_tail]
                } = state
              )
              when mode not in [:raw, {:inner, :raw}] do
           do_parse(rest, %Md.Parser.State{
             state
-            | bag: %{state.bag | stock: content},
+            | bag: %{state.bag | stock: Enum.reverse(content)},
+              mode: [:raw | modes],
               path: [{unquote(tag), attrs, []} | path_tail]
           })
+        end
+
+        defp do_parse(
+               <<unquote(closing), unquote(inner_opening), rest::binary>>,
+               %Md.Parser.State{mode: [mode | _] = modes, path: [_, {unquote(tag), _, _} | _]} =
+                 state
+             )
+             when mode not in [:raw, {:inner, :raw}] do
+          state = rewind_state(state, until: unquote(tag), inclusive: false)
+
+          do_parse(
+            <<unquote(closing), unquote(inner_opening), rest::binary>>,
+            state
+          )
         end
 
         if not is_nil(disclosure_opening) do
@@ -714,8 +729,7 @@ defmodule Md.Engine do
                  bag: %{stock: outer_content},
                  path: [{unquote(tag), attrs, [content]} | path_tail]
                } = state
-             )
-             when mode not in [:raw, {:inner, :raw}] do
+             ) do
           final_tag =
             case unquote(outer) do
               {:attribute, {attr_content, attr_outer_content}} ->
@@ -723,7 +737,7 @@ defmodule Md.Engine do
                   attrs
                   |> Kernel.||(%{})
                   |> Map.put(attr_content, content)
-                  |> Map.put(attr_outer_content, List.first(outer_content))
+                  |> Map.put(attr_outer_content, to_s(outer_content))
 
                 {unquote(tag), attrs, []}
 
@@ -1064,7 +1078,7 @@ defmodule Md.Engine do
         [tag] =
           tags = properties |> Map.get_lazy(:tag, fn -> String.to_atom(md) end) |> List.wrap()
 
-        mode = properties[:mode]
+        mode = Map.get(properties, :mode, :md)
         attrs = Macro.escape(properties[:attributes])
         closing = Map.get(properties, :closing, "</#{tag}>")
         closing_match = Md.Engine.closing_match(tags)
@@ -1104,7 +1118,7 @@ defmodule Md.Engine do
           context: __CALLER__.module do
       Enum.each(braces, fn {md, properties} ->
         [tag | _] = tags = List.wrap(properties[:tag])
-        mode = properties[:mode]
+        mode = Map.get(properties, :mode)
         attrs = Macro.escape(properties[:attributes])
         closing = Map.get(properties, :closing, md)
         closing_match = Md.Engine.closing_match(tags)
@@ -1451,6 +1465,18 @@ defmodule Md.Engine do
 
       defp trim({elem, attrs, branch}, reverse?),
         do: if(reverse?, do: {elem, attrs, Enum.reverse(branch)}, else: {elem, attrs, branch})
+
+      @spec to_s([Md.Listener.trace()]) :: String.t()
+      defp to_s(ast) do
+        ast
+        |> Enum.flat_map(fn
+          s when is_binary(s) -> [s]
+          {_, _, []} -> []
+          {_, _, [s]} when is_binary(s) -> [s]
+          {_, _, list} when is_list(list) -> [to_s(list)]
+        end)
+        |> Enum.join(" ")
+      end
     end
   end
 end

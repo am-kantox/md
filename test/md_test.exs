@@ -114,8 +114,19 @@ defmodule MdTest do
     ```
     """
 
+    # assert [{:pre, nil, [{:code, nil, ["a\nb\nc"]}]}] ==
+    #          Md.parse(input).ast
+
     assert "<pre><code>a\nb\nc</code></pre>" ==
              Md.generate(input, Md.Parser.Default, format: :none)
+
+    # input = """
+    # ```
+    # `inline-code`
+    # ```
+    # """
+
+    # assert [] == Md.parse(input).ast
   end
 
   test "codeblock" do
@@ -280,12 +291,17 @@ defmodule MdTest do
     input = """
     Hi,
 
-    check this [link](https://example.com)!
+    check this [link](https://example.com/~derek/img_1.jpg)!
     """
 
     assert [
              {:p, nil, ["Hi,"]},
-             {:p, nil, ["check this ", {:a, %{href: "https://example.com"}, ["link"]}, "!"]}
+             {:p, nil,
+              [
+                "check this ",
+                {:a, %{href: "https://example.com/~derek/img_1.jpg"}, ["link"]},
+                "!"
+              ]}
            ] == Md.parse(input).ast
   end
 
@@ -293,20 +309,23 @@ defmodule MdTest do
     input = """
     Hi,
 
-    check this ![title](https://example.com)!
+    check this ![some_title](https://example.com)!
 
-    and this: !![title](https://example.com)!
+    and this: !![removed ~title~](https://example.com)!
     """
 
     assert [
              {:p, nil, ["Hi,"]},
              {:p, nil,
-              ["check this ", {:img, %{src: "https://example.com", title: "title"}, []}, "!"]},
+              ["check this ", {:img, %{src: "https://example.com", title: "some title"}, []}, "!"]},
              {:p, nil,
               [
                 "and this: ",
                 {:figure, nil,
-                 [{:figcaption, nil, ["title"]}, {:img, %{src: "https://example.com"}, []}]},
+                 [
+                   {:figcaption, nil, ["removed ", {:s, nil, ["title"]}]},
+                   {:img, %{src: "https://example.com"}, []}
+                 ]},
                 "!"
               ]}
            ] == Md.parse(input).ast
