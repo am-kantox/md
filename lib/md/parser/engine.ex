@@ -675,8 +675,7 @@ defmodule Md.Engine do
         disclosure_closing = properties[:disclosure_closing]
         attrs = Macro.escape(properties[:attributes])
 
-        inner_mode =
-          if match?({:attribute, {_, _}}, outer), do: :raw, else: :md
+        inner_mode = if match?({:attribute, {_, _}}, outer), do: :raw, else: :md
 
         defp do_parse(<<unquote(md), rest::binary>>, state())
              when mode not in [:raw, {:inner, :raw}] do
