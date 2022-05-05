@@ -100,8 +100,7 @@ defmodule MdTest do
              {:p, nil, ["foo"]},
              {:pre, nil,
               [
-                {:code, %{class: "elixir"},
-                 ["def foo, do: :ok", "\n", "\n", "def bar, do: :error"]}
+                {:code, %{class: "elixir"}, ["def foo, do: :ok\n\ndef bar, do: :error\n"]}
               ]}
            ] ==
              Md.parse(input).ast
@@ -114,19 +113,22 @@ defmodule MdTest do
     ```
     """
 
-    # assert [{:pre, nil, [{:code, nil, ["a\nb\nc"]}]}] ==
-    #          Md.parse(input).ast
+    assert [{:pre, nil, [{:code, nil, ["a\nb\nc\n"]}]}] ==
+             Md.parse(input).ast
 
-    assert "<pre><code>a\nb\nc</code></pre>" ==
+    assert "<pre>\n  <code>\n    a\nb\nc\n\n  </code>\n</pre>" ==
+             Md.generate(input)
+
+    assert "<pre><code>a\nb\nc\n</code></pre>" ==
              Md.generate(input, Md.Parser.Default, format: :none)
 
-    # input = """
-    # ```
-    # `inline-code`
-    # ```
-    # """
+    input = """
+    ```
+    `inline-code`
+    ```
+    """
 
-    # assert [] == Md.parse(input).ast
+    assert [{:pre, nil, [{:code, nil, ["`inline-code`\n"]}]}] == Md.parse(input).ast
   end
 
   test "codeblock" do
@@ -144,8 +146,7 @@ defmodule MdTest do
              {:p, nil, ["foo"]},
              {:div, %{class: "pre"},
               [
-                {:code, %{class: "pre"},
-                 ["defmodule Foo", "\n", "    def bar, do: :baz", "\n", "end"]}
+                {:code, %{class: "pre"}, ["defmodule Foo", "\n    def bar, do: :baz", "\nend"]}
               ]},
              {:p, nil, ["bar"]}
            ] = Md.parse(input).ast
@@ -238,8 +239,7 @@ defmodule MdTest do
                 {:blockquote, nil,
                  [
                    "This is the 1st line of nested quote.",
-                   "\n",
-                   "This is the 2ns line of nested quote."
+                   "\nThis is the 2ns line of nested quote."
                  ]},
                 "This is the quote."
               ]},
@@ -273,14 +273,13 @@ defmodule MdTest do
                    {:li, nil, ["This is the first list item."]},
                    {:li, nil, ["This is the second list item."]}
                  ]},
-                "\n",
-                "Here's some example code:",
+                "\nHere's some example code:",
                 "\n",
                 "\n",
                 {:div, %{class: "pre"},
                  [
                    {:code, %{class: "pre"},
-                    [" defmodule Foo do", "\n", "   def yo!, do: :ok", "\n", " end"]}
+                    [" defmodule Foo do", "\n   def yo!, do: :ok", "\n end"]}
                  ]},
                 "Cool code, ain’t it?"
               ]}
@@ -346,7 +345,7 @@ defmodule MdTest do
     assert [
              {:p, nil, ["Hi,"]},
              {:p, nil, ["check this ", {:a, %{href: " https://example.com"}, ["link"]}, "!"]},
-             {:p, nil, ["Another [text].", "\n", "\n", "[2]: https://example.com"]}
+             {:p, nil, ["Another [text].", "\n", "\n[2]: https://example.com"]}
            ] == Md.parse(input).ast
   end
 
@@ -410,7 +409,7 @@ defmodule MdTest do
                {:p, nil,
                 [
                   "he*llo  ",
-                  {:b, nil, ["foo ", {:strong, %{class: "red"}, ["bar"]}, "\n", "baz"]},
+                  {:b, nil, ["foo ", {:strong, %{class: "red"}, ["bar"]}, "\nbaz"]},
                   " 42"
                 ]},
                {:blockquote, nil, ["Hi, ", {:b, nil, ["there"]}, "olala"]},
@@ -425,8 +424,7 @@ defmodule MdTest do
                      "2nd ",
                      {:b, nil, ["1st"]},
                      " line",
-                     "\n",
-                     "2nd ",
+                     "\n2nd ",
                      {:code, %{class: "code-inline"}, ["2nd"]},
                      " line"
                    ]},
@@ -446,10 +444,7 @@ defmodule MdTest do
                 ]},
                {:p, nil, ["Hi ", {:a, %{href: "https://anchor.com"}, ["anchor"]}, " 1!"]},
                {:pre, nil,
-                [
-                  {:code, %{class: "elixir"},
-                   ["def foo, do: :ok", "\n", "\n", "def bar, do: :error"]}
-                ]},
+                [{:code, %{class: "elixir"}, ["def foo, do: :ok\n\ndef bar, do: :error\n"]}]},
                {:ul, nil,
                 [
                   {:li, nil,

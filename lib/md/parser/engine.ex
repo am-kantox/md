@@ -44,7 +44,14 @@ defmodule Md.Engine do
 
       Md.Engine.macros()
       Md.Engine.init()
+
+      Md.Engine.block(@final_syntax[:block])
+
       Md.Engine.skip()
+
+      Md.Engine.flush(@final_syntax[:flush])
+      Md.Engine.shift(@final_syntax[:shift])
+
       Md.Engine.tag(@final_syntax[:tag])
       Md.Engine.escape(@final_syntax[:escape])
       Md.Engine.comment(@final_syntax[:comment])
@@ -58,9 +65,6 @@ defmodule Md.Engine do
       Md.Engine.magnet(@final_syntax[:magnet])
       Md.Engine.custom(@final_syntax[:custom])
       Md.Engine.substitute(@final_syntax[:substitute])
-      Md.Engine.flush(@final_syntax[:flush])
-      Md.Engine.block(@final_syntax[:block])
-      Md.Engine.shift(@final_syntax[:shift])
       Md.Engine.linefeed()
       Md.Engine.linefeed_mode()
       Md.Engine.pair(@final_syntax[:pair])
@@ -476,6 +480,13 @@ defmodule Md.Engine do
             |> push_mode(:md)
 
           do_parse(rest, state)
+        end
+
+        defp do_parse(
+               <<x::utf8, rest::binary>>,
+               %Md.Parser.State{path: [unquote_splicing(closing_match) | _]} = state
+             ) do
+          do_parse(rest, push_char(state, x))
         end
       end)
     end
@@ -1261,15 +1272,20 @@ defmodule Md.Engine do
 
       defp push_char(state(), x) do
         path =
-          case {x, mode, state.path} do
-            {<<?\n>>, _, [{elem, attrs, branch} | rest]} ->
-              [{elem, attrs, [x | branch]} | rest]
+          case {x, state.path} do
+            {<<?\n>>, [{elem, attrs, []} | rest]}
+            when mode == :raw ->
+              [{elem, attrs, ["", "\s"]} | rest]
 
-            {_, _, [{elem, attrs, [txt | branch]} | rest]}
-            when is_binary(txt) and txt != <<?\n>> ->
+            {<<?\n>>, [{elem, attrs, [txt]} | rest]}
+            when is_binary(txt) and mode == :raw ->
+              [{elem, attrs, ["", txt]} | rest]
+
+            {x, [{elem, attrs, [txt | branch]} | rest]}
+            when is_binary(txt) and (mode == :raw or x != <<?\n>>) ->
               [{elem, attrs, [txt <> x | branch]} | rest]
 
-            {_, _, [{elem, attrs, branch} | rest]} ->
+            {_, [{elem, attrs, branch} | rest]} ->
               [{elem, attrs, [x | branch]} | rest]
           end
 
@@ -1463,8 +1479,10 @@ defmodule Md.Engine do
       defp trim({elem, attrs, [<<?\s>> | rest]}, reverse?),
         do: trim({elem, attrs, rest}, reverse?)
 
-      defp trim({elem, attrs, branch}, reverse?),
-        do: if(reverse?, do: {elem, attrs, Enum.reverse(branch)}, else: {elem, attrs, branch})
+      defp trim({elem, attrs, branch}, reverse?) do
+        branch = Enum.reject(branch, &match?("", &1))
+        if reverse?, do: {elem, attrs, Enum.reverse(branch)}, else: {elem, attrs, branch}
+      end
 
       @spec to_s([Md.Listener.trace()]) :: String.t()
       defp to_s(ast) do
