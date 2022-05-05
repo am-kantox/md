@@ -316,7 +316,7 @@ defmodule MdTest do
     assert [
              {:p, nil, ["Hi,"]},
              {:p, nil,
-              ["check this ", {:img, %{src: "https://example.com", title: "some title"}, []}, "!"]},
+              ["check this ", {:img, %{src: "https://example.com", title: "some_title"}, []}, "!"]},
              {:p, nil,
               [
                 "and this: ",

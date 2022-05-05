@@ -675,12 +675,15 @@ defmodule Md.Engine do
         disclosure_closing = properties[:disclosure_closing]
         attrs = Macro.escape(properties[:attributes])
 
+        inner_mode =
+          if match?({:attribute, {_, _}}, outer), do: :raw, else: :md
+
         defp do_parse(<<unquote(md), rest::binary>>, state())
              when mode not in [:raw, {:inner, :raw}] do
           state =
             state
             |> listener({:tag, {unquote(md), unquote(tag)}, unquote(inner_tag)})
-            |> replace_mode(:md)
+            |> push_mode(unquote(inner_mode))
             |> push_path(for tag <- unquote(tags), do: {tag, unquote(attrs), []})
 
           do_parse(rest, state)
@@ -693,11 +696,12 @@ defmodule Md.Engine do
                  path: [{unquote(tag), attrs, content} | path_tail]
                } = state
              )
-             when mode not in [:raw, {:inner, :raw}] do
+             when mode not in [{:inner, :raw}] do
+          state = state |> pop_mode(unquote(inner_mode)) |> push_mode(:raw)
+
           do_parse(rest, %Md.Parser.State{
             state
             | bag: %{state.bag | stock: Enum.reverse(content)},
-              mode: [:raw | modes],
               path: [{unquote(tag), attrs, []} | path_tail]
           })
         end
