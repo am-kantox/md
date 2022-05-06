@@ -904,9 +904,11 @@ defmodule Md.Engine do
 
           case mode do
             {:linefeed, pos} ->
-              # [AM] state = pop_mode(state)
               state =
-                state
+                if(match?(<<?\n, _::binary>>, rest),
+                  do: flip_flop_state(state),
+                  else: state
+                )
                 |> pop_mode([{:linefeed, pos}, {:nested, unquote(tag), 1}, :md])
                 |> push_mode({:nested, unquote(tag), 1})
 
@@ -924,6 +926,9 @@ defmodule Md.Engine do
                 |> push_path(for tag <- unquote(tags), do: {tag, unquote(attrs), []})
 
               do_parse(rest, state)
+
+            :md ->
+              do_parse(rest, push_char(state, unquote(md)))
           end
         end
 
@@ -962,6 +967,16 @@ defmodule Md.Engine do
 
             %Md.Parser.State{mode: [{:nested, tag, _} | _]} ->
               state = rewind_state(state, until: tag, inclusive: false)
+              do_parse(rest, state)
+
+            %Md.Parser.State{mode: []} = state ->
+              state =
+                state
+                |> rewind_state(until: unquote(tag), inclusive: false)
+                |> listener({:tag, {unquote(md), unquote(tag)}, true})
+                |> push_mode(unquote(mode))
+                |> push_path(for tag <- unquote(tags), do: {tag, unquote(attrs), []})
+
               do_parse(rest, state)
           end
         end
@@ -1354,6 +1369,15 @@ defmodule Md.Engine do
 
   defmacro helpers do
     quote do
+      @spec flip_flop_state(Md.Listener.state()) :: Md.Listener.state()
+      defp flip_flop_state(%Md.Parser.State{path: []} = state), do: state
+
+      defp flip_flop_state(%Md.Parser.State{path: [{element, attrs, _} | _] = path} = state),
+        do:
+          state
+          |> rewind_state(until: element, inclusive: true)
+          |> push_path({element, attrs, []})
+
       @spec rewind_state(Md.Listener.state(), [
               {:until, Md.Listener.element()}
               | {:trim, boolean()}

@@ -24,7 +24,7 @@ defmodule Md.Parser.Syntax.Default do
         {"&", %{text: "&amp;"}}
       ],
       escape: [
-        {"\\", %{}}
+        {<<92>>, %{}}
       ],
       comment: [
         {"<!--", %{closing: "-->"}}
@@ -96,7 +96,7 @@ defmodule Md.Parser.Syntax.Default do
         {"#####", %{tag: :h5}},
         {"######", %{tag: :h6}},
         # nested
-        {">", %{tag: :blockquote}}
+        {">", %{tag: [:blockquote, :p]}}
       ],
       list:
         [

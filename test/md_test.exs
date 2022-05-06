@@ -57,7 +57,7 @@ defmodule MdTest do
                 {:a, %{href: "https://twitter.com/mudasobwa"}, ["@mudasobwa"]},
                 " twitter reference."
               ]}
-           ] = Md.parse(input).ast
+           ] == Md.parse(input).ast
   end
 
   test "flush" do
@@ -149,7 +149,7 @@ defmodule MdTest do
                 {:code, %{class: "pre"}, ["defmodule Foo", "\n    def bar, do: :baz", "\nend"]}
               ]},
              {:p, nil, ["bar"]}
-           ] = Md.parse(input).ast
+           ] == Md.parse(input).ast
   end
 
   test "nested list" do
@@ -175,7 +175,7 @@ defmodule MdTest do
                 {:ul, nil, [{:li, nil, ["2 | 3"]}]},
                 {:li, nil, ["1 | 3"]}
               ]}
-           ] = Md.parse(input).ast
+           ] == Md.parse(input).ast
   end
 
   test "deeply nested list" do
@@ -200,7 +200,7 @@ defmodule MdTest do
                  ]},
                 {:li, nil, ["1 | 2"]}
               ]}
-           ] = Md.parse(input).ast
+           ] == Md.parse(input).ast
   end
 
   test "list from #12" do
@@ -219,6 +219,32 @@ defmodule MdTest do
     end)
   end
 
+  test "blockquote" do
+    input = """
+    This is a paragraph.
+    > Blockquote.
+    """
+
+    assert [{:p, nil, ["This is a paragraph."]}, {:blockquote, nil, [{:p, nil, ["Blockquote."]}]}] ==
+             Md.parse(input).ast
+
+    input = """
+    > line 1
+    >
+    > line 2
+    """
+
+    assert [{:blockquote, nil, [{:p, nil, ["line 1"]}, {:p, nil, ["\nline 2"]}]}] ==
+             Md.parse(input).ast
+
+    input = """
+    > <me\\@example.com>
+    """
+
+    assert [{:blockquote, nil, [{:p, nil, ["&lt;me@example.com>"]}]}] ==
+             Md.parse(input).ast
+  end
+
   test "nested paragraph" do
     input = """
     > This is a header.
@@ -233,18 +259,22 @@ defmodule MdTest do
     assert [
              {:blockquote, nil,
               [
-                "This is a header.",
-                "\n",
-                "\n",
-                {:blockquote, nil,
+                {:p, nil, ["This is a header."]},
+                {:p, nil,
                  [
-                   "This is the 1st line of nested quote.",
-                   "\nThis is the 2ns line of nested quote."
-                 ]},
-                "This is the quote."
+                   {:blockquote, nil,
+                    [
+                      {:p, nil,
+                       [
+                         "This is the 1st line of nested quote.",
+                         "\nThis is the 2ns line of nested quote."
+                       ]}
+                    ]},
+                   "This is the quote."
+                 ]}
               ]},
              {:p, nil, ["Here's some example code:"]}
-           ] = Md.parse(input).ast
+           ] == Md.parse(input).ast
   end
 
   test "markdown in nested paragraph" do
@@ -264,26 +294,33 @@ defmodule MdTest do
     """
 
     assert [
+             {
+               :blockquote,
+               nil,
+               [
+                 {:p, nil, [{:h2, nil, ["This is a header."]}]},
+                 "\n",
+                 {:ol, nil,
+                  [
+                    {:li, nil, ["This is the first list item."]},
+                    {:li, nil, ["This is the second list item."]}
+                  ]},
+                 "\nHere's some example code:"
+               ]
+             },
              {:blockquote, nil,
               [
-                {:h2, nil, ["This is a header."]},
-                "\n",
-                {:ol, nil,
+                {:p, nil,
                  [
-                   {:li, nil, ["This is the first list item."]},
-                   {:li, nil, ["This is the second list item."]}
-                 ]},
-                "\nHere's some example code:",
-                "\n",
-                "\n",
-                {:div, %{class: "pre"},
-                 [
-                   {:code, %{class: "pre"},
-                    [" defmodule Foo do", "\n   def yo!, do: :ok", "\n end"]}
-                 ]},
-                "Cool code, ain’t it?"
+                   {:div, %{class: "pre"},
+                    [
+                      {:code, %{class: "pre"},
+                       [" defmodule Foo do", "\n   def yo!, do: :ok", "\n end"]}
+                    ]},
+                   "Cool code, ain’t it?"
+                 ]}
               ]}
-           ] = Md.parse(input).ast
+           ] == Md.parse(input).ast
   end
 
   test "pairs (link)" do
@@ -412,23 +449,29 @@ defmodule MdTest do
                   {:b, nil, ["foo ", {:strong, %{class: "red"}, ["bar"]}, "\nbaz"]},
                   " 42"
                 ]},
-               {:blockquote, nil, ["Hi, ", {:b, nil, ["there"]}, "olala"]},
+               {:blockquote, nil, [{:p, nil, ["Hi, ", {:b, nil, ["there"]}]}, "olala"]},
                {:blockquote, nil,
                 [
-                  "Hi, ",
-                  {:figure, nil,
-                   [{:figcaption, nil, ["image"]}, {:img, %{src: "https://image.com"}, []}]},
-                  "\n",
-                  {:blockquote, nil,
+                  {:p, nil,
                    [
-                     "2nd ",
-                     {:b, nil, ["1st"]},
-                     " line",
-                     "\n2nd ",
-                     {:code, %{class: "code-inline"}, ["2nd"]},
-                     " line"
-                   ]},
-                  "boom"
+                     "Hi, ",
+                     {:figure, nil,
+                      [{:figcaption, nil, ["image"]}, {:img, %{src: "https://image.com"}, []}]},
+                     "\n",
+                     {:blockquote, nil,
+                      [
+                        {:p, nil,
+                         [
+                           "2nd ",
+                           {:b, nil, ["1st"]},
+                           " line",
+                           "\n2nd ",
+                           {:code, %{class: "code-inline"}, ["2nd"]},
+                           " line"
+                         ]}
+                      ]},
+                     "boom"
+                   ]}
                 ]},
                {:ul, nil,
                 [
