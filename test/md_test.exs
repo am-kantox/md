@@ -228,21 +228,30 @@ defmodule MdTest do
     assert [{:p, nil, ["This is a paragraph."]}, {:blockquote, nil, [{:p, nil, ["Blockquote."]}]}] ==
              Md.parse(input).ast
 
-    input = """
-    > line 1
-    >
-    > line 2
-    """
-
-    assert [{:blockquote, nil, [{:p, nil, ["line 1"]}, {:p, nil, ["\nline 2"]}]}] ==
-             Md.parse(input).ast
-
-    input = """
-    > <me\\@example.com>
-    """
+    Enum.each(0..10, fn i ->
+      assert [
+               {:blockquote, nil,
+                [{:p, nil, ["top line (#{i})"]}, {:p, nil, ["\nbottom line (#{i})"]}]}
+             ] ==
+               Md.parse(
+                 ">top line (#{i})\n>#{" " |> List.duplicate(i) |> Enum.join()}\n>bottom line (#{i})"
+               ).ast
+    end)
 
     assert [{:blockquote, nil, [{:p, nil, ["&lt;me@example.com>"]}]}] ==
-             Md.parse(input).ast
+             Md.parse("> <me\\@example.com>").ast
+
+    assert [{:blockquote, nil, [{:p, nil, ["line 1"]}, {:p, nil, ["\nline2"]}]}] ==
+             Md.parse("\n> line 1\n> \n> line2").ast
+
+    assert [
+             {:blockquote, nil,
+              [{:p, nil, ["line 1", "\n", {:em, nil, [{:i, nil, []}]}]}, "line 2"]}
+           ] ==
+             Md.parse(">line 1\n>___\n>line 2").ast
+
+    assert [{:blockquote, nil, [{:p, nil, ["line 1"]}, {:hr, nil, []}, {:p, nil, ["line 2"]}]}] ==
+             Md.parse(">line 1\n>---\>line 2").ast
   end
 
   test "nested paragraph" do
@@ -381,7 +390,7 @@ defmodule MdTest do
 
     assert [
              {:p, nil, ["Hi,"]},
-             {:p, nil, ["check this ", {:a, %{href: " https://example.com"}, ["link"]}, "!"]},
+             {:p, nil, ["check this ", {:a, %{href: "https://example.com"}, ["link"]}, "!"]},
              {:p, nil, ["Another [text].", "\n", "\n[2]: https://example.com"]}
            ] == Md.parse(input).ast
   end

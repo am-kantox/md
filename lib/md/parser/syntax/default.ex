@@ -33,7 +33,7 @@ defmodule Md.Parser.Syntax.Default do
         {"|", %{tag: :td, outer: :table, inner: :tr, first_inner_tag: :th, skip: "|-"}}
       ],
       flush: [
-        {"---", %{tag: :hr, rewind: true}},
+        {"---", %{tag: :hr, rewind: :flip_flop}},
         {"  \n", %{tag: :br}},
         {"  \n", %{tag: :br}}
       ],

@@ -432,13 +432,20 @@ defmodule Md.Engine do
 
         defp do_parse(<<unquote(md), rest::binary>>, state())
              when mode not in [:raw, {:inner, :raw}] do
-          state =
-            unquote(rewind)
-            |> if(do: rewind_state(state), else: state)
+          updater = fn state ->
+            state
             |> push_path(for tag <- unquote(tags), do: {tag, unquote(attrs), []})
             |> listener({:tag, {unquote(md), unquote(tag)}, nil})
             |> rewind_state(until: unquote(tag), inclusive: true)
             |> set_mode({:linefeed, 0})
+          end
+
+          state =
+            case unquote(rewind) do
+              true -> state |> rewind_state() |> updater.()
+              :flip_flop -> flip_flop_state(state, updater)
+              _ -> updater.(state)
+            end
 
           do_parse(rest, state)
         end
@@ -652,10 +659,12 @@ defmodule Md.Engine do
         do_parse(rest, state)
       end
 
+      defp do_parse(<<?\s, rest::binary>>, %Md.Parser.State{mode: [{:inner, _} | _]} = state),
+        do: do_parse(rest, state)
+
       defp do_parse(<<?\s, rest::binary>>, %Md.Parser.State{mode: [{mode, _, _} | _]} = state)
-           when mode in [:nested, :inner] do
-        do_parse(rest, state)
-      end
+           when mode in [:nested, :inner],
+           do: do_parse(rest, state)
     end
   end
 
@@ -892,6 +901,15 @@ defmodule Md.Engine do
             |> push_path(for tag <- unquote(tags), do: {tag, unquote(attrs), []})
 
           do_parse(rest, state)
+        end
+
+        defp do_parse(
+               <<unquote(md), ?\s, rest::binary>>,
+               %Md.Parser.State{mode: [mode | _], path: [unquote_splicing(closing_match) | _]} =
+                 state
+             )
+             when mode not in [:raw, {:inner, :raw}] do
+          do_parse(<<unquote(md), rest::binary>>, state)
         end
 
         defp do_parse(
@@ -1369,14 +1387,19 @@ defmodule Md.Engine do
 
   defmacro helpers do
     quote do
-      @spec flip_flop_state(Md.Listener.state()) :: Md.Listener.state()
-      defp flip_flop_state(%Md.Parser.State{path: []} = state), do: state
+      @spec flip_flop_state(Md.Listener.state(), Md.Listener.callback()) :: Md.Listener.state()
+      defp flip_flop_state(state, callback \\ & &1)
+      defp flip_flop_state(%Md.Parser.State{path: []} = state, callback), do: callback.(state)
 
-      defp flip_flop_state(%Md.Parser.State{path: [{element, attrs, _} | _] = path} = state),
-        do:
-          state
-          |> rewind_state(until: element, inclusive: true)
-          |> push_path({element, attrs, []})
+      defp flip_flop_state(
+             %Md.Parser.State{path: [{element, attrs, _} | _] = path} = state,
+             callback
+           ),
+           do:
+             state
+             |> rewind_state(until: element, inclusive: true)
+             |> callback.()
+             |> push_path({element, attrs, []})
 
       @spec rewind_state(Md.Listener.state(), [
               {:until, Md.Listener.element()}

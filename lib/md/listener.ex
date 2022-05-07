@@ -9,6 +9,7 @@ defmodule Md.Listener do
   @type leaf :: binary()
   @type branch :: {element(), attributes(), [leaf() | branch()]}
   @type trace :: branch()
+  @type callback :: (state() -> state())
 
   @type parse_mode ::
           :idle
