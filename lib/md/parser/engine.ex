@@ -352,8 +352,13 @@ defmodule Md.Engine do
               state
               | bag: %{state.bag | deferred: [stock | state.bag.deferred], stock: []}
             }
-            |> push_path(transformed)
-            |> to_ast()
+            |> case do
+              %Md.Parser.State{path: []} = state ->
+                push_path(state, {nest(:outer), nil, [transformed]})
+
+              state ->
+                state |> push_path(transformed) |> to_ast()
+            end
             |> listener({:tag, {unquote(md), :magnet}, nil})
             |> pop_mode(:magnet)
 
@@ -1186,11 +1191,13 @@ defmodule Md.Engine do
 
         defp do_parse(<<unquote(md), rest::binary>>, state())
              when mode not in [:raw, {:inner, :raw}] do
+          tags = if [] == state.path, do: [nest(:outer) | unquote(tags)], else: unquote(tags)
+
           state =
             state
             |> listener({:tag, {unquote(md), unquote(tag)}, true})
             |> push_mode(unquote(mode))
-            |> push_path(for tag <- unquote(tags), do: {tag, unquote(attrs), []})
+            |> push_path(for tag <- tags, do: {tag, unquote(attrs), []})
 
           do_parse(rest, state)
         end
@@ -1287,6 +1294,11 @@ defmodule Md.Engine do
         end
       end
 
+      @compile {:inline, nest: 1}
+      @spec nest(kind :: :outer | :span) :: Md.Listener.element()
+      defp nest(:outer), do: get_in(syntax(), [:settings, :outer]) || :article
+      defp nest(:span), do: get_in(syntax(), [:settings, :span]) || :span
+
       @spec push_char(Md.Listener.state(), pos_integer() | binary()) :: Md.Listener.state()
       defp push_char(state, x) when is_integer(x),
         do: push_char(state, <<x::utf8>>)
@@ -1295,16 +1307,10 @@ defmodule Md.Engine do
       defp push_char(empty({:linefeed, _}), <<?\s>>), do: state
 
       defp push_char(empty({:linefeed, _}), x),
-        do: %Md.Parser.State{
-          state
-          | path: [{get_in(syntax(), [:settings, :outer]) || :article, nil, [x]}]
-        }
+        do: %Md.Parser.State{state | path: [{nest(:outer), nil, [x]}]}
 
       defp push_char(empty(_), x),
-        do: %Md.Parser.State{
-          state
-          | path: [{get_in(syntax(), [:settings, :span]) || :span, nil, [x]}]
-        }
+        do: %Md.Parser.State{state | path: [{nest(:span), nil, [x]}]}
 
       defp push_char(state(), x) do
         path =
