@@ -49,8 +49,10 @@ defmodule Md.Parser do
   def generate(input, parser, options) when is_binary(input),
     do: input |> parser.parse() |> elem(1) |> generate(parser, options)
 
-  def generate(%State{ast: ast}, _parser, options),
-    do: XmlBuilder.generate(ast, options)
+  def generate(%State{ast: ast}, _parser, options) do
+    options = Keyword.put_new(options, :format, *: :indent, pre: :none, code: :none)
+    XmlBuilder.generate(ast, options)
+  end
 
   @doc false
   defmacro __using__(opts \\ []) do

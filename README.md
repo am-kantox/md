@@ -141,6 +141,7 @@ Instead of `@syntax` module attribute, one might use
 
 ## Changelog
 
+- **`0.6.8`** `xml_builder`→`xml_builder_ex` (default formatting for code is now `:none`)
 - **`0.6.0`** allow HTML tags (without attributes yet)
 - **`0.5.0`** DSL + `use Md.Parser, syntax: …`  for configurable syntax
 - **`0.4.0`** configurable syntax as `@syntax`

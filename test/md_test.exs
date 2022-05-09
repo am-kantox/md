@@ -125,10 +125,10 @@ defmodule MdTest do
              Md.parse(input).ast
 
     assert "<pre>\n  <code>\n    a\nb\nc\n\n  </code>\n</pre>" ==
-             Md.generate(input)
+             Md.generate(input, Md.Parser.Default, format: :indent)
 
     assert "<pre><code>a\nb\nc\n</code></pre>" ==
-             Md.generate(input, Md.Parser.Default, format: :none)
+             Md.generate(input)
 
     input = """
     ```
