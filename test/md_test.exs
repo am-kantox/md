@@ -253,10 +253,23 @@ defmodule MdTest do
              Md.parse("\n> line 1\n> \n> line2").ast
 
     assert [
+             {:blockquote, nil, [{:p, nil, ["line 1", "\n", {:i, nil, []}, "line 2"]}]}
+           ] ==
+             Md.parse(">line 1\n>_\n>line 2").ast
+
+    assert [
              {:blockquote, nil,
-              [{:p, nil, ["line 1", "\n", {:em, nil, [{:i, nil, []}]}]}, "line 2"]}
+              [{:p, nil, ["line 1", "\n", {:em, nil, [{:i, nil, []}]}, "line 2"]}]}
            ] ==
              Md.parse(">line 1\n>___\n>line 2").ast
+
+    assert [
+             {:blockquote, nil,
+              [
+                {:p, nil, ["line 1", "\n", {:em, nil, []}, {:em, nil, [{:i, nil, []}]}, "line 2"]}
+              ]}
+           ] ==
+             Md.parse(">line 1\n>_______\n>line 2").ast
 
     assert [{:blockquote, nil, [{:p, nil, ["line 1"]}, {:hr, nil, []}, {:p, nil, ["line 2"]}]}] ==
              Md.parse(">line 1\n>---\>line 2").ast
@@ -315,28 +328,28 @@ defmodule MdTest do
                :blockquote,
                nil,
                [
-                 {:p, nil, [{:h2, nil, ["This is a header."]}]},
-                 "\n",
-                 {:ol, nil,
+                 {:p, nil,
                   [
-                    {:li, nil, ["This is the first list item."]},
-                    {:li, nil, ["This is the second list item."]}
+                    {:h2, nil, ["This is a header."]},
+                    "\n",
+                    {:ol, nil,
+                     [
+                       {:li, nil, ["This is the first list item."]},
+                       {:li, nil, ["This is the second list item."]}
+                     ]},
+                    "\nHere's some example code:"
                   ]},
-                 "\nHere's some example code:"
+                 {:p, nil,
+                  [
+                    {:div, %{class: "pre"},
+                     [
+                       {:code, %{class: "pre"},
+                        [" defmodule Foo do", "\n   def yo!, do: :ok", "\n end"]}
+                     ]},
+                    "Cool code, ain’t it?"
+                  ]}
                ]
-             },
-             {:blockquote, nil,
-              [
-                {:p, nil,
-                 [
-                   {:div, %{class: "pre"},
-                    [
-                      {:code, %{class: "pre"},
-                       [" defmodule Foo do", "\n   def yo!, do: :ok", "\n end"]}
-                    ]},
-                   "Cool code, ain’t it?"
-                 ]}
-              ]}
+             }
            ] == Md.parse(input).ast
   end
 
@@ -466,7 +479,7 @@ defmodule MdTest do
                   {:b, nil, ["foo ", {:strong, %{class: "red"}, ["bar"]}, "\nbaz"]},
                   " 42"
                 ]},
-               {:blockquote, nil, [{:p, nil, ["Hi, ", {:b, nil, ["there"]}]}, "olala"]},
+               {:blockquote, nil, [{:p, nil, ["Hi, ", {:b, nil, ["there"]}, "olala"]}]},
                {:blockquote, nil,
                 [
                   {:p, nil,

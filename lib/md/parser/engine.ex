@@ -553,7 +553,6 @@ defmodule Md.Engine do
                } = state
              ) do
           state = %Md.Parser.State{state | mode: [nested, unquote(mode) | modes]}
-
           do_parse(input, state)
         end
 
@@ -895,6 +894,7 @@ defmodule Md.Engine do
         [tag | _] = tags = List.wrap(properties[:tag])
         mode = Macro.escape(Map.get(properties, :mode, {:nested, tag, 1}))
         attrs = Macro.escape(properties[:attributes])
+        rewind_until = List.last(tags)
 
         closing_match = Md.Engine.closing_match(tags)
 
@@ -909,15 +909,6 @@ defmodule Md.Engine do
         end
 
         defp do_parse(
-               <<unquote(md), ?\s, rest::binary>>,
-               %Md.Parser.State{mode: [mode | _], path: [unquote_splicing(closing_match) | _]} =
-                 state
-             )
-             when mode not in [:raw, {:inner, :raw}] do
-          do_parse(<<unquote(md), rest::binary>>, state)
-        end
-
-        defp do_parse(
                <<unquote(md), rest::binary>>,
                %Md.Parser.State{mode: [mode | _], path: [unquote_splicing(closing_match) | _]} =
                  state
@@ -927,11 +918,16 @@ defmodule Md.Engine do
 
           case mode do
             {:linefeed, pos} ->
+              {state, rest} =
+                rest
+                |> String.trim_leading(<<?\s>>)
+                |> case do
+                  <<?\n, _::binary>> = trimmed -> {flip_flop_state(state), trimmed}
+                  _ -> {state, rest}
+                end
+
               state =
-                if(match?(<<?\n, _::binary>>, rest),
-                  do: flip_flop_state(state),
-                  else: state
-                )
+                state
                 |> pop_mode([{:linefeed, pos}, {:nested, unquote(tag), 1}, :md])
                 |> push_mode({:nested, unquote(tag), 1})
 
@@ -989,7 +985,7 @@ defmodule Md.Engine do
               do_parse(rest, state)
 
             %Md.Parser.State{mode: [{:nested, tag, _} | _]} ->
-              state = rewind_state(state, until: tag, inclusive: false)
+              state = rewind_state(state, until: unquote(rewind_until), inclusive: false)
               do_parse(rest, state)
 
             %Md.Parser.State{mode: []} = state ->
@@ -1492,11 +1488,6 @@ defmodule Md.Engine do
       @spec to_ast(Md.Listener.state(), %{required(atom()) => atom()}) :: Md.Listener.state()
       defp to_ast(state, pop \\ %{})
       defp to_ast(%Md.Parser.State{path: []} = state, _), do: state
-
-      @empty_tags @final_syntax |> Keyword.get(:settings, []) |> Map.get(:empty_tags, [])
-      defp to_ast(%Md.Parser.State{path: [{tag, _, []} | rest]} = state, _)
-           when tag not in @empty_tags,
-           do: to_ast(%Md.Parser.State{state | path: rest})
 
       defp to_ast(%Md.Parser.State{path: [{tag, _, _} = last], ast: ast} = state, pop) do
         last =
