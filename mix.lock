@@ -23,5 +23,5 @@
   "ssl_verify_fun": {:hex, :ssl_verify_fun, "1.1.6", "cf344f5692c82d2cd7554f5ec8fd961548d4fd09e7d22f5b62482e5aeaebd4b0", [:make, :mix, :rebar3], [], "hexpm", "bdb0d2471f453c88ff3908e7686f86f9be327d065cc1ec16fa4540197ea04680"},
   "unicode_util_compat": {:hex, :unicode_util_compat, "0.7.0", "bc84380c9ab48177092f43ac89e4dfa2c6d62b40b8bd132b1059ecc7232f9a78", [:rebar3], [], "hexpm", "25eee6d67df61960cf6a794239566599b09e17e668d3700247bc498638152521"},
   "xml_builder": {:hex, :xml_builder, "2.2.0", "cc5f1eeefcfcde6e90a9b77fb6c490a20bc1b856a7010ce6396f6da9719cbbab", [:mix], [], "hexpm", "9d66d52fb917565d358166a4314078d39ef04d552904de96f8e73f68f64a62c9"},
-  "xml_builder_ex": {:hex, :xml_builder_ex, "3.0.0", "b68c8617f5eaee667c9581ea7a72841ff71203bcff6753038acc592648ca74e4", [:mix], [], "hexpm", "4ba557f4f5adfebc045a50f449a326e1b7cda540a458305080d0ff57551ef68f"},
+  "xml_builder_ex": {:hex, :xml_builder_ex, "3.0.1", "9bdb85c8729bb13d19f30a1127cca47ebab2a4006b58bbc3d971168c68e377e4", [:mix], [], "hexpm", "35d04f8dc7a5012ac9145f1b015c413dbf1f6c83b911dc0ccb0653a9f804b38c"},
 }

@@ -4,10 +4,10 @@ defmodule Md.Listener do
   when the elements are encountered and processed.
   """
 
-  @type element :: atom()
-  @type attributes :: nil | %{required(element()) => any()}
-  @type leaf :: binary()
-  @type branch :: {element(), attributes(), [leaf() | branch()]}
+  @type element :: XmlBuilder.Element.name()
+  @type attributes :: XmlBuilder.Element.attrs()
+  @type leaf :: XmlBuilder.Element.content()
+  @type branch :: XmlBuilder.Element.content()
   @type trace :: branch()
   @type callback :: (state() -> state())
 
@@ -43,6 +43,7 @@ defmodule Md.Listener do
           mode: [parse_mode()],
           ast: [branch()],
           listener: nil | module(),
+          payload: any(),
           bag: %{
             indent: [non_neg_integer()],
             stock: [branch()],

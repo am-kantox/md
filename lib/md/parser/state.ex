@@ -2,10 +2,13 @@ defmodule Md.Parser.State do
   @moduledoc """
   The internal state of the parser.
   """
+
+  @type t :: Md.Listener.state()
   defstruct path: [],
             ast: [],
             mode: [:idle],
             listener: nil,
+            payload: nil,
             bag: %{indent: [], stock: [], deferred: []}
 
   defimpl Inspect do
@@ -26,6 +29,7 @@ defmodule Md.Parser.State do
             path: path,
             ast: ast,
             mode: mode,
+            payload: payload,
             bag: %{indent: indent, stock: stock, deferred: deferred}
           },
           opts
@@ -33,6 +37,7 @@ defmodule Md.Parser.State do
       inner = [
         path: path,
         ast: ast,
+        payload: payload,
         internals: [mode: mode, indent: indent, stock: stock, deferred: deferred]
       ]
 
