@@ -21,6 +21,8 @@ defmodule Md.Engine do
     quote generated: true, location: :keep, context: __CALLER__.module do
       alias Md.Parser.Syntax.Void
 
+      import Md.Guards
+
       syntax =
         @syntax
         |> Enum.reduce(
@@ -314,7 +316,8 @@ defmodule Md.Engine do
           end
           |> Macro.escape()
 
-        terminators = Map.get(properties, :terminators, [?\s, ?\n])
+        terminators = Map.get(properties, :terminators, [])
+
         greedy = Map.get(properties, :greedy, false)
 
         defp do_parse(unquote(md) <> rest, state()) when mode not in [:raw, {:inner, :raw}] do
@@ -326,23 +329,25 @@ defmodule Md.Engine do
         end
 
         defp do_parse(
-               <<x::utf8, delim, rest::binary>>,
+               <<x::utf8, delim::utf8, rest::binary>>,
                %Md.Parser.State{
                  bag: %{stock: [stock, unquote(md)]},
                  mode: [mode | _]
                } = state
              )
-             when mode == :magnet and delim in unquote(terminators) do
+             when mode == :magnet and is_utf8_space(delim) do
           {pre, post, delim} =
-            if unquote(greedy), do: {unquote(md), <<delim>>, ""}, else: {"", "", <<delim>>}
+            if unquote(greedy),
+              do: {unquote(md), <<delim::utf8>>, ""},
+              else: {"", "", <<delim::utf8>>}
 
           {stock, rest} =
             case x do
-              x when x != ?_ and x not in ?0..?9 and x not in ?a..?z and x not in ?A..?Z ->
-                {pre <> stock <> post, <<x>> <> delim <> rest}
+              x when x in unquote(terminators) ->
+                {pre <> stock <> post, <<x::utf8>> <> delim <> rest}
 
               _ ->
-                {pre <> stock <> <<x>> <> post, delim <> rest}
+                {pre <> stock <> <<x::utf8>> <> post, delim <> rest}
             end
 
           transformed = unquote(transform).(unquote(md), stock)

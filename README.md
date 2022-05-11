@@ -141,6 +141,7 @@ Instead of `@syntax` module attribute, one might use
 
 ## Changelog
 
+- **`0.7.1`** `Md.Guards` through `StringNaming`
 - **`0.7.0`** allow `payload` to be passed through within state
 - **`0.6.8`** `xml_builder`→`xml_builder_ex` (default formatting for code is now `:none`)
 - **`0.6.0`** allow HTML tags (without attributes yet)

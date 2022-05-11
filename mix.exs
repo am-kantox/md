@@ -2,7 +2,7 @@ defmodule Md.MixProject do
   use Mix.Project
 
   @app :md
-  @version "0.7.0"
+  @version "0.7.1"
 
   def project do
     [
@@ -50,6 +50,7 @@ defmodule Md.MixProject do
   defp deps do
     [
       {:xml_builder_ex, "~> 3.0"},
+      {:string_naming, "~> 0.7"},
       {:credo, "~> 1.0", only: :ci, runtime: false},
       {:excoveralls, "~> 0.14", only: :test, runtime: false},
       {:dialyxir, "~> 1.0", only: :ci, runtime: false},
@@ -80,7 +81,7 @@ defmodule Md.MixProject do
   defp package do
     [
       name: @app,
-      files: ~w|lib mix.exs README.md|,
+      files: ~w|config lib mix.exs README.md|,
       maintainers: ["Aleksei Matiushkin"],
       licenses: ["MIT"],
       links: %{

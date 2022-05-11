@@ -38,9 +38,9 @@ defmodule Md.Parser.Syntax.Default do
         {"  \n", %{tag: :br}}
       ],
       magnet: [
-        {"⚓", %{transform: Anchor}},
+        {"⚓", %{transform: Anchor, terminators: []}},
         {"[^", %{transform: Footnote, terminators: [?\]], greedy: true}},
-        {"@", %{transform: &TwitterHandle.apply/2}}
+        {"@", %{transform: &TwitterHandle.apply/2, terminators: [?,, ?., ?!, ??, ?:, ?;]}}
       ],
       block: [
         {"```", %{tag: [:pre, :code], pop: %{code: :class}}}
