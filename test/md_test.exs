@@ -1,6 +1,7 @@
 defmodule MdTest do
   use ExUnit.Case
   doctest Md
+  doctest Md.Guards
 
   test "leading spaces" do
     assert %Md.Parser.State{

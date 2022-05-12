@@ -1,6 +1,28 @@
 defmodule Md.Guards do
   @moduledoc """
   Several guards for the proper UTF8 handling of input.
+
+  ## Examples
+
+      iex> import Md.Guards
+      iex> with <<x::utf8, _::binary>> <- " ", do: is_ascii_space(x)
+      true
+      iex> with <<x::utf8, _::binary>> <- " ", do: is_non_ascii_space(x)
+      false
+      iex> with <<x::utf8, _::binary>> <- " ", do: is_utf8_space(x)
+      true
+      iex> with <<x::utf8, _::binary>> <- "!", do: is_ascii_punct(x)
+      true
+      iex> with <<x::utf8, _::binary>> <- "!", do: is_non_ascii_punct(x)
+      false
+      iex> with <<x::utf8, _::binary>> <- "!", do: is_utf8_punct(x)
+      true
+      iex> with <<x::utf8, _::binary>> <- "1", do: is_ascii_digit(x)
+      true
+      iex> with <<x::utf8, _::binary>> <- "1", do: is_non_ascii_digit(x)
+      false
+      iex> with <<x::utf8,_::binary>> <- "①", do: is_utf8_digit(x)
+      true
   """
 
   [digits, punctuation, spaces] =
