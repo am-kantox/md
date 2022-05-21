@@ -15,6 +15,7 @@ defmodule Md.Parser.Syntax.Void do
     %{
       outer: :p,
       span: :span,
+      linebreaks: [<<?\r, ?\n>>, <<?\n>>],
       empty_tags: ~w|img hr br|a
     }
   end
