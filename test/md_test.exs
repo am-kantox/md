@@ -18,6 +18,11 @@ defmodule MdTest do
            } = Md.parse("   he\\*llo \n  *foo **bar baz \n\n Answer: _42_.")
   end
 
+  test "linefeeds" do
+    assert [{:p, nil, ["L1"]}, {:p, nil, ["L2"]}] == Md.parse("L1\n\nL2").ast
+    assert [{:p, nil, ["L1"]}, {:p, nil, ["L2"]}] == Md.parse("L1\r\n\r\nL2").ast
+  end
+
   test "substitutes" do
     assert [{:p, nil, ["foo &lt;br> bar"]}] == Md.parse("foo <br> bar").ast
   end

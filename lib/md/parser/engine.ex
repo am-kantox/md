@@ -44,6 +44,8 @@ defmodule Md.Engine do
       Module.register_attribute(__MODULE__, :final_syntax, accumulate: false)
       Module.put_attribute(__MODULE__, :final_syntax, syntax)
 
+      @linebreaks get_in(syntax, [:settings, :linebreaks]) || [<<?\n>>]
+
       Md.Engine.macros()
       Md.Engine.init()
 
@@ -99,11 +101,13 @@ defmodule Md.Engine do
   end
 
   defmacro skip do
-    quote generated: true, location: :keep, context: __CALLER__.module do
-      defp do_parse(<<?\n, input::binary>>, state(:skip)) do
-        state = state |> pop_mode(:skip) |> push_mode({:linefeed, 0})
-        do_parse(input, state)
-      end
+    quote generated: true, location: :keep, context: __CALLER__.module, bind_quoted: [] do
+      Enum.each(@linebreaks, fn lb ->
+        defp do_parse(<<unquote(lb), input::binary>>, state(:skip)) do
+          state = state |> pop_mode(:skip) |> push_mode({:linefeed, 0})
+          do_parse(input, state)
+        end
+      end)
 
       defp do_parse(<<_::utf8, input::binary>>, state(:skip)) do
         do_parse(input, state)
@@ -604,14 +608,16 @@ defmodule Md.Engine do
           do_parse(rest, state)
         end
 
-        defp do_parse(
-               <<?\n, rest::binary>>,
-               %Md.Parser.State{mode: [mode | _], path: [unquote_splicing(closing_match) | _]} =
-                 state
-             )
-             when mode == unquote(mode) do
-          do_parse(rest, state |> push_char(?\n) |> push_mode({:linefeed, 0}))
-        end
+        Enum.each(@linebreaks, fn lb ->
+          defp do_parse(
+                 <<unquote(lb), rest::binary>>,
+                 %Md.Parser.State{mode: [mode | _], path: [unquote_splicing(closing_match) | _]} =
+                   state
+               )
+               when mode == unquote(mode) do
+            do_parse(rest, state |> push_char(unquote(lb)) |> push_mode({:linefeed, 0}))
+          end
+        end)
 
         defp do_parse(
                <<x::utf8, rest::binary>>,
@@ -628,36 +634,40 @@ defmodule Md.Engine do
   defmacro linefeed do
     quote generated: true,
           location: :keep,
+          bind_quoted: [],
           context: __CALLER__.module do
-      defp do_parse(<<?\n, rest::binary>>, state()) when mode in [:raw, {:inner, :raw}] do
-        do_parse(rest, push_char(state, ?\n))
-      end
+      Enum.each(@linebreaks, fn lb ->
+        defp do_parse(<<unquote(lb), rest::binary>>, state())
+             when mode in [:raw, {:inner, :raw}] do
+          do_parse(rest, push_char(state, unquote(lb)))
+        end
 
-      defp do_parse(<<?\n, rest::binary>>, state_linefeed()) do
-        state =
-          state
-          |> listener(:break)
-          |> rewind_state(trim: true)
-          |> set_mode({:linefeed, 0})
+        defp do_parse(<<unquote(lb), rest::binary>>, state_linefeed()) do
+          state =
+            state
+            |> listener(:break)
+            |> rewind_state(trim: true)
+            |> set_mode({:linefeed, 0})
 
-        do_parse(rest, state)
-      end
+          do_parse(rest, state)
+        end
 
-      defp do_parse(<<?\n, rest::binary>>, state()) do
-        state =
-          case state.mode do
-            [{:inner, {_, outer}, _} | _] -> rewind_state(state, until: outer, inclusive: true)
-            _ -> state
-          end
+        defp do_parse(<<unquote(lb), rest::binary>>, state()) do
+          state =
+            case state.mode do
+              [{:inner, {_, outer}, _} | _] -> rewind_state(state, until: outer, inclusive: true)
+              _ -> state
+            end
 
-        state =
-          state
-          |> listener(:linefeed)
-          |> push_char(?\n)
-          |> push_mode({:linefeed, 0})
+          state =
+            state
+            |> listener(:linefeed)
+            |> push_char(unquote(lb))
+            |> push_mode({:linefeed, 0})
 
-        do_parse(rest, state)
-      end
+          do_parse(rest, state)
+        end
+      end)
     end
   end
 
@@ -929,13 +939,7 @@ defmodule Md.Engine do
 
           case mode do
             {:linefeed, pos} ->
-              {state, rest} =
-                rest
-                |> String.trim_leading(<<?\s>>)
-                |> case do
-                  <<?\n, _::binary>> = trimmed -> {flip_flop_state(state), trimmed}
-                  _ -> {state, rest}
-                end
+              {rest, state} = maybe_flip_flop(rest, state)
 
               state =
                 state
@@ -1264,7 +1268,7 @@ defmodule Md.Engine do
   end
 
   defmacro macros do
-    quote generated: true, context: __CALLER__.module do
+    quote generated: true, bind_quoted: [], context: __CALLER__.module do
       # helper macros
       defmacrop initial do
         quote generated: true, context: __CALLER__.module do
@@ -1310,7 +1314,10 @@ defmodule Md.Engine do
       defp push_char(state, x) when is_integer(x),
         do: push_char(state, <<x::utf8>>)
 
-      defp push_char(empty(_), <<?\n>>), do: state
+      Enum.each(@linebreaks, fn lb ->
+        defp push_char(empty(_), <<unquote(lb)>>), do: state
+      end)
+
       defp push_char(empty({:linefeed, _}), <<?\s>>), do: state
 
       defp push_char(empty({:linefeed, _}), x),
@@ -1319,27 +1326,27 @@ defmodule Md.Engine do
       defp push_char(empty(_), x),
         do: %Md.Parser.State{state | path: [{nest(:span), nil, [x]}]}
 
-      defp push_char(state(), x) do
-        path =
-          case {x, state.path} do
-            {<<?\n>>, [{elem, attrs, []} | rest]}
-            when mode == :raw ->
-              [{elem, attrs, ["", "\s"]} | rest]
+      defp push_char(state(), x),
+        do: %Md.Parser.State{state | path: do_push_char(x, state.path, mode)}
 
-            {<<?\n>>, [{elem, attrs, [txt]} | rest]}
-            when is_binary(txt) and mode == :raw ->
-              [{elem, attrs, ["", txt]} | rest]
+      @spec do_push_char(binary(), [Md.Listener.trace()], Md.Listener.parse_mode()) :: [
+              Md.Listener.trace()
+            ]
+      Enum.each(@linebreaks, fn lb ->
+        defp do_push_char(<<unquote(lb)>>, [{elem, attrs, []} | rest], :raw),
+          do: [{elem, attrs, ["", "\s"]} | rest]
 
-            {x, [{elem, attrs, [txt | branch]} | rest]}
-            when is_binary(txt) and (mode == :raw or x != <<?\n>>) ->
-              [{elem, attrs, [txt <> x | branch]} | rest]
+        defp do_push_char(<<unquote(lb)>>, [{elem, attrs, [txt]} | rest], :raw)
+             when is_binary(txt),
+             do: [{elem, attrs, ["", txt]} | rest]
+      end)
 
-            {_, [{elem, attrs, branch} | rest]} ->
-              [{elem, attrs, [x | branch]} | rest]
-          end
+      defp do_push_char(x, [{elem, attrs, [txt | branch]} | rest], mode)
+           when is_binary(txt) and (mode == :raw or x not in @linebreaks),
+           do: [{elem, attrs, [txt <> x | branch]} | rest]
 
-        %Md.Parser.State{state | path: path}
-      end
+      defp do_push_char(x, [{elem, attrs, branch} | rest], _mode),
+        do: [{elem, attrs, [x | branch]} | rest]
 
       ## helpers
       @spec listener(Md.Listener.state(), Md.Listener.context()) :: Md.Listener.state()
@@ -1399,7 +1406,23 @@ defmodule Md.Engine do
   end
 
   defmacro helpers do
-    quote do
+    quote generated: true, location: :keep, bind_quoted: [] do
+      @spec maybe_flip_flop(String.t(), Md.Listener.state()) :: {String.t(), Md.Listener.state()}
+      defp maybe_flip_flop(rest, state), do: maybe_flip_flop(rest, state, rest)
+
+      @spec maybe_flip_flop(String.t(), Md.Listener.state(), String.t()) ::
+              {String.t(), Md.Listener.state()}
+      defp maybe_flip_flop(<<?\s, trimmed::binary()>>, state, rest),
+        do: maybe_flip_flop(trimmed, state, rest)
+
+      Enum.each(@linebreaks, fn lb ->
+        defp maybe_flip_flop(<<unquote(lb), _::binary()>> = trimmed, state, rest),
+          do: {trimmed, flip_flop_state(state)}
+      end)
+
+      defp maybe_flip_flop(_, state, rest),
+        do: {rest, state}
+
       @spec flip_flop_state(Md.Listener.state(), Md.Listener.callback()) :: Md.Listener.state()
       defp flip_flop_state(state, callback \\ & &1)
       defp flip_flop_state(%Md.Parser.State{path: []} = state, callback), do: callback.(state)
@@ -1531,8 +1554,10 @@ defmodule Md.Engine do
       @spec trim(Md.Listener.trace(), boolean()) :: Md.Listener.trace()
       defp trim(trace, reverse?)
 
-      defp trim({elem, attrs, [<<?\n>> | rest]}, reverse?),
-        do: trim({elem, attrs, rest}, reverse?)
+      Enum.each(@linebreaks, fn lb ->
+        defp trim({elem, attrs, [<<unquote(lb)>> | rest]}, reverse?),
+          do: trim({elem, attrs, rest}, reverse?)
+      end)
 
       defp trim({elem, attrs, [<<?\s>> | rest]}, reverse?),
         do: trim({elem, attrs, rest}, reverse?)
