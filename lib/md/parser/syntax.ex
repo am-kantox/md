@@ -7,7 +7,7 @@ defmodule Md.Parser.Syntax do
   @type settings :: %{
           optional(:outer) => atom(),
           optional(:span) => atom(),
-          optional(:linebreaks) => [nonempty_binary()],
+          optional(:linebreaks) => [binary()],
           optional(:disclosure_range) => Range.t(),
           optional(:empty_tags) => [atom()]
         }
