@@ -45,6 +45,7 @@ defmodule Md.Engine do
       Module.put_attribute(__MODULE__, :final_syntax, syntax)
 
       @linebreaks get_in(syntax, [:settings, :linebreaks]) || [<<?\n>>]
+      @linebreak List.first(@linebreaks, <<?\n>>)
 
       Md.Engine.macros()
       Md.Engine.init()
