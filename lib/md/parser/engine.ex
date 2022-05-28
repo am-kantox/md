@@ -45,7 +45,7 @@ defmodule Md.Engine do
       Module.put_attribute(__MODULE__, :final_syntax, syntax)
 
       @linebreaks get_in(syntax, [:settings, :linebreaks]) || [<<?\n>>]
-      @linebreak List.first(@linebreaks, <<?\n>>)
+      @linebreak List.first(@linebreaks) || <<?\n>>
 
       Md.Engine.macros()
       Md.Engine.init()
@@ -332,6 +332,12 @@ defmodule Md.Engine do
 
           do_parse(rest, state)
         end
+
+        defp do_parse(
+               <<x::utf8>>,
+               %Md.Parser.State{bag: %{stock: [_, unquote(md)]}, mode: [:magnet | _]} = state
+             ),
+             do: do_parse(<<x::utf8, @linebreak>>, state)
 
         defp do_parse(
                <<x::utf8, delim::utf8, rest::binary>>,
@@ -1247,16 +1253,6 @@ defmodule Md.Engine do
     quote generated: true,
           location: :keep,
           context: __CALLER__.module do
-      defp do_parse(
-             "",
-             %Md.Parser.State{mode: [:magnet | _], bag: %{stock: [last, pre | rest]}} = state
-           ) do
-        do_parse(String.last(last) <> @linebreak, %Md.Parser.State{
-          state
-          | bag: %{state.bag | stock: [String.slice(last, 0..-2), pre | rest]}
-        })
-      end
-
       defp do_parse("", %Md.Parser.State{bag: %{stock: [last | rest]}} = state) do
         do_parse(last, %Md.Parser.State{state | bag: %{state.bag | stock: rest}})
       end
