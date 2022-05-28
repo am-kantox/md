@@ -157,7 +157,7 @@ defmodule Md.Engine do
             |> listener({:comment, state.bag.stock})
             |> pop_mode(:comment)
 
-          do_parse(rest, state)
+          do_parse(rest, %Md.Parser.State{state | bag: %{state.bag | stock: []}})
         end
 
         defp do_parse(<<x::utf8, rest::binary>>, state()) when mode == :comment do
@@ -363,10 +363,7 @@ defmodule Md.Engine do
           transformed = unquote(transform).(unquote(md), stock)
 
           state =
-            %Md.Parser.State{
-              state
-              | bag: %{state.bag | deferred: [stock | state.bag.deferred], stock: []}
-            }
+            %Md.Parser.State{state | bag: %{state.bag | stock: []}}
             |> case do
               %Md.Parser.State{path: []} = state ->
                 push_path(state, {nest(:outer), nil, [transformed]})
@@ -1249,6 +1246,20 @@ defmodule Md.Engine do
     quote generated: true,
           location: :keep,
           context: __CALLER__.module do
+      defp do_parse(
+             "",
+             %Md.Parser.State{mode: [:magnet | _], bag: %{stock: [last, pre | rest]}} = state
+           ) do
+        do_parse(String.last(last) <> @linebreak, %Md.Parser.State{
+          state
+          | bag: %{state.bag | stock: [String.slice(last, 0..-2), pre | rest]}
+        })
+      end
+
+      defp do_parse("", %Md.Parser.State{bag: %{stock: [last | rest]}} = state) do
+        do_parse(last, %Md.Parser.State{state | bag: %{state.bag | stock: rest}})
+      end
+
       defp do_parse("", state()) do
         state =
           state
