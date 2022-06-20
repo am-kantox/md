@@ -325,14 +325,6 @@ defmodule Md.Engine do
 
         greedy = Map.get(properties, :greedy, false)
 
-        defp do_parse(unquote(md) <> rest, state()) when mode not in [:raw, {:inner, :raw}] do
-          state =
-            %Md.Parser.State{state | bag: %{state.bag | stock: ["", unquote(md)]}}
-            |> push_mode(:magnet)
-
-          do_parse(rest, state)
-        end
-
         defp do_parse(
                <<x::utf8>>,
                %Md.Parser.State{bag: %{stock: [_, unquote(md)]}, mode: [:magnet | _]} = state
@@ -392,6 +384,16 @@ defmodule Md.Engine do
 
         do_parse(rest, state)
       end
+      
+      Enum.each(magnets, fn {md, _properties} ->
+        defp do_parse(unquote(md) <> rest, state()) when mode not in [:raw, {:inner, :raw}] do
+          state =
+            %Md.Parser.State{state | bag: %{state.bag | stock: ["", unquote(md)]}}
+            |> push_mode(:magnet)
+
+          do_parse(rest, state)
+        end
+      end)
     end
   end
 

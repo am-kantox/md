@@ -79,6 +79,18 @@ defmodule MdTest do
 
     assert [{:p, nil, [{:a, %{href: "https://twitter.com/王"}, ["@王"]}]}, {:p, nil, ["foo"]}] ==
              Md.parse("@王\nfoo").ast
+
+    assert [
+             {:p, nil, [{:a, %{href: "https://twitter.com/@"}, ["@@"]}]}
+           ] == Md.parse("@@").ast
+
+    assert [
+             {:p, nil, [{:a, %{href: "https://twitter.com/@bar"}, ["@@bar"]}]}
+           ] == Md.parse("@@bar").ast
+
+    assert [
+             {:p, nil, [{:a, %{href: "https://twitter.com/@@bar"}, ["@@@bar"]}]}
+           ] == Md.parse("@@@bar").ast
   end
 
   test "flush" do
