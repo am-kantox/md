@@ -37,7 +37,7 @@ defmodule Md.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger],
+      extra_applications: [:logger, :inets],
       mod: {Md.Application, []}
     ]
   end
@@ -51,6 +51,7 @@ defmodule Md.MixProject do
     [
       {:xml_builder_ex, "~> 3.0"},
       {:string_naming, "~> 0.7"},
+      {:floki, "~>0.33"},
       {:credo, "~> 1.0", only: :ci, runtime: false},
       {:excoveralls, "~> 0.14", only: :test, runtime: false},
       {:dialyxir, "~> 1.0", only: :ci, runtime: false},
