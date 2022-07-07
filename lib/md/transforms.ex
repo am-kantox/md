@@ -23,7 +23,12 @@ defmodule Md.Transforms.Anchor do
   end
 
   @impl Md.Transforms
-  def apply(_md, url) do
+  def apply(_md, url), do: do_apply(url, Application.get_env(:md, :download_cards, false))
+
+  @spec do_apply(binary(), boolean()) :: Md.Listener.branch()
+  defp do_apply(url, false), do: {:a, %{href: url}, [url]}
+
+  defp do_apply(url, true) do
     ast =
       with {:ok, {{_proto, 200, _ok}, _headers, html}} <- :httpc.request(url),
            {:ok, document} <- Floki.parse_document(html),
