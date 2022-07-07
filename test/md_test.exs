@@ -45,7 +45,7 @@ defmodule MdTest do
 
   test "magnet" do
     input = """
-    This is a text with a reference to ⚓https://example.com and like.
+    This is a text with a reference to https://example.com and like.
 
     This is @mudasobwa twitter reference.
     """
@@ -437,7 +437,13 @@ defmodule MdTest do
     assert [
              {:p, nil, ["Hi,"]},
              {:p, nil, ["check this ", {:a, %{href: "https://example.com"}, ["link"]}, "!"]},
-             {:p, nil, ["Another [text].", "\n", "\n[2]: https://example.com"]}
+             {:p, nil,
+              [
+                "Another [text].",
+                "\n",
+                "\n[2]: ",
+                {:a, %{href: "https://example.com"}, ["https://example.com"]}
+              ]}
            ] == Md.parse(input).ast
   end
 

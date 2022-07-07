@@ -340,9 +340,13 @@ defmodule Md.Engine do
              )
              when mode == :magnet and is_utf8_space(delim) do
           {pre, post, delim} =
-            if unquote(greedy),
-              do: {unquote(md), <<delim::utf8>>, ""},
-              else: {"", "", <<delim::utf8>>}
+            case unquote(greedy) do
+              :left -> {unquote(md), "", <<delim::utf8>>}
+              :right -> {"", <<delim::utf8>>, ""}
+              :both -> {unquote(md), <<delim::utf8>>, ""}
+              true -> {unquote(md), <<delim::utf8>>, ""}
+              false -> {"", "", <<delim::utf8>>}
+            end
 
           {stock, rest} =
             case {unquote(terminators), x} do
@@ -384,7 +388,7 @@ defmodule Md.Engine do
 
         do_parse(rest, state)
       end
-      
+
       Enum.each(magnets, fn {md, _properties} ->
         defp do_parse(unquote(md) <> rest, state()) when mode not in [:raw, {:inner, :raw}] do
           state =

@@ -40,9 +40,11 @@ defmodule Md.Parser.Syntax.Default do
         {"  \r\n", %{tag: :br}}
       ],
       magnet: [
-        {"⚓", %{transform: Anchor, terminators: []}},
+        # {"⚓", %{transform: Anchor, terminators: []}},
         {"[^", %{transform: Footnote, terminators: [?\]], greedy: true}},
-        {"@", %{transform: &TwitterHandle.apply/2, terminators: [?,, ?., ?!, ??, ?:, ?;]}}
+        {"@", %{transform: &TwitterHandle.apply/2, terminators: [?,, ?., ?!, ??, ?:, ?;]}},
+        {"https://", %{transform: Anchor, terminators: [], greedy: :left}},
+        {"http://", %{transform: Anchor, terminators: [], greedy: :left}}
       ],
       block: [
         {"```", %{tag: [:pre, :code], pop: %{code: :class}}}
