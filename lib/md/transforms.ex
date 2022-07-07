@@ -86,7 +86,7 @@ defmodule Md.Transforms.Anchor do
         end
       end
 
-    {:a, %{href: url}, ast}
+    {:a, %{href: url}, if(is_list(ast), do: ast, else: [url])}
   end
 end
 
