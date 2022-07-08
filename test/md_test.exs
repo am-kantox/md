@@ -48,6 +48,8 @@ defmodule MdTest do
     This is a text with a reference to https://example.com and like.
 
     This is @mudasobwa twitter reference.
+
+    http://localhost/foo.jpg
     """
 
     assert [
@@ -62,7 +64,8 @@ defmodule MdTest do
                 "This is ",
                 {:a, %{href: "https://twitter.com/mudasobwa"}, ["@mudasobwa"]},
                 " twitter reference."
-              ]}
+              ]},
+             {:p, nil, [{:img, %{src: "http://localhost/foo.jpg"}, []}]}
            ] == Md.parse(input).ast
 
     assert [

@@ -23,9 +23,17 @@ defmodule Md.Transforms.Anchor do
   end
 
   @impl Md.Transforms
-  def apply(_md, url), do: do_apply(url, Application.get_env(:md, :download_cards, false))
+  def apply(_md, url) do
+    what_to_apply =
+      if Path.extname(url) in ~w|.png .jpg .jpeg .gif|,
+        do: :image,
+        else: Application.get_env(:md, :download_cards, false)
 
-  @spec do_apply(binary(), boolean()) :: Md.Listener.branch()
+    do_apply(url, what_to_apply)
+  end
+
+  @spec do_apply(binary(), true | false | :image) :: Md.Listener.branch()
+  defp do_apply(url, :image), do: {:img, %{src: url}, []}
   defp do_apply(url, false), do: {:a, %{href: url}, [url]}
 
   defp do_apply(url, true) do
