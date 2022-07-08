@@ -36,70 +36,82 @@ defmodule Md.Transforms.Anchor do
   defp do_apply(url, :image), do: {:img, %{src: url}, []}
   defp do_apply(url, false), do: {:a, %{href: url}, [url]}
 
-  defp do_apply(url, true) do
-    ast =
-      with {:ok, {{_proto, 200, _ok}, _headers, html}} <- :httpc.request(url),
-           {:ok, document} <- Floki.parse_document(html),
-           metas <- Floki.find(document, "meta") do
-        data =
-          for({"meta", props, []} <- metas, do: props)
-          |> Enum.map(&Map.new/1)
-          |> Enum.reduce(%{}, fn
-            %{"name" => "title", "content" => content}, acc ->
-              put_in(acc, [Access.key("html", %{}), "title"], content)
+  case Code.ensure_compiled(Floki) do
+    {:module, Floki} ->
+      defp do_apply(url, true) do
+        ast =
+          with {:ok, {{_proto, 200, _ok}, _headers, html}} <- :httpc.request(url),
+               {:ok, document} <- Floki.parse_document(html),
+               metas <- Floki.find(document, "meta") do
+            data =
+              for({"meta", props, []} <- metas, do: props)
+              |> Enum.map(&Map.new/1)
+              |> Enum.reduce(%{}, fn
+                %{"name" => "title", "content" => content}, acc ->
+                  put_in(acc, [Access.key("html", %{}), "title"], content)
 
-            %{"name" => "description", "content" => content}, acc ->
-              put_in(acc, [Access.key("html", %{}), "description"], content)
+                %{"name" => "description", "content" => content}, acc ->
+                  put_in(acc, [Access.key("html", %{}), "description"], content)
 
-            %{"name" => "keywords", "content" => content}, acc ->
-              put_in(acc, [Access.key("html", %{}), "keywords"], content)
+                %{"name" => "keywords", "content" => content}, acc ->
+                  put_in(acc, [Access.key("html", %{}), "keywords"], content)
 
-            %{"name" => "twitter:" <> tw, "content" => content}, acc ->
-              put_in(acc, [Access.key("twitter", %{}), tw], content)
+                %{"name" => "twitter:" <> tw, "content" => content}, acc ->
+                  put_in(acc, [Access.key("twitter", %{}), tw], content)
 
-            %{"property" => "og:" <> og, "content" => content}, acc ->
-              put_in(acc, [Access.key("og", %{}), og], content)
+                %{"property" => "og:" <> og, "content" => content}, acc ->
+                  put_in(acc, [Access.key("og", %{}), og], content)
 
-            _, acc ->
-              acc
-          end)
+                _, acc ->
+                  acc
+              end)
 
-        data = %{
-          title: dig(data, "title"),
-          description: dig(data, "description"),
-          image: get_in(data, ["twitter", "image:src"]) || get_in(data, ["og", "image"]),
-          alt: get_in(data, ["og", "image:alt"]),
-          size: dig_image_size(data),
-          url: dig(data, "url")
-        }
+            data = %{
+              title: dig(data, "title"),
+              description: dig(data, "description"),
+              image: get_in(data, ["twitter", "image:src"]) || get_in(data, ["og", "image"]),
+              alt: get_in(data, ["og", "image:alt"]),
+              size: dig_image_size(data),
+              url: dig(data, "url")
+            }
 
-        case {data.image, data.description, data.title} do
-          {nil, nil, nil} ->
-            [url]
+            case {data.image, data.description, data.title} do
+              {nil, nil, nil} ->
+                [url]
 
-          {nil, nil, title} ->
-            [title]
+              {nil, nil, title} ->
+                [title]
 
-          {nil, description, nil} ->
-            [description]
+              {nil, description, nil} ->
+                [description]
 
-          _ ->
-            [
-              {:figure, %{class: "card"},
-               [
-                 {:img, %{src: data.image, alt: data.alt}, []},
-                 {:figcaption, %{},
-                  [
-                    {:b, %{class: "card-title"}, [data.title]},
-                    {:br, %{}, []},
-                    {:span, %{class: "card-description"}, [data.description]}
-                  ]}
-               ]}
-            ]
-        end
+              _ ->
+                [
+                  {:figure, %{class: "card"},
+                   [
+                     {:img, %{src: data.image, alt: data.alt}, []},
+                     {:figcaption, %{},
+                      [
+                        {:b, %{class: "card-title"}, [data.title]},
+                        {:br, %{}, []},
+                        {:span, %{class: "card-description"}, [data.description]}
+                      ]}
+                   ]}
+                ]
+            end
+          end
+
+        {:a, %{href: url}, if(is_list(ast), do: ast, else: [url])}
       end
 
-    {:a, %{href: url}, if(is_list(ast), do: ast, else: [url])}
+    _ ->
+      Mix.shell().info([
+        [:bright, :yellow, "[INFO] ", :reset],
+        "You’ve chosen `Md.Transforms.Anchor` to be used. ",
+        "Add `:floki` dependency for it to build the twitter/og cards up!"
+      ])
+
+      defp do_apply(url, true), do: {:a, %{href: url}, [url]}
   end
 end
 

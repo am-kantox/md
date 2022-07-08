@@ -141,6 +141,7 @@ Instead of `@syntax` module attribute, one might use
 
 ## Changelog
 
+- **`0.8.0`** `Md.Transforms.Anchor` supporting twitter/og cards via `Floki`
 - **`0.7.4`** configurable linebreaks (defaults: `\n`, `\r\n`)
 - **`0.7.1`** `Md.Guards` through `StringNaming`
 - **`0.7.0`** allow `payload` to be passed through within state

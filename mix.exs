@@ -2,7 +2,7 @@ defmodule Md.MixProject do
   use Mix.Project
 
   @app :md
-  @version "0.7.6"
+  @version "0.8.0"
 
   def project do
     [
@@ -28,7 +28,7 @@ defmodule Md.MixProject do
       ],
       dialyzer: [
         plt_file: {:no_warn, ".dialyzer/plts/dialyzer.plt"},
-        plt_add_apps: [],
+        plt_add_apps: [:floki],
         ignore_warnings: ".dialyzer/ignore.exs"
       ]
     ]
@@ -51,7 +51,7 @@ defmodule Md.MixProject do
     [
       {:xml_builder_ex, "~> 3.0"},
       {:string_naming, "~> 0.7"},
-      {:floki, "~>0.33"},
+      {:floki, "~> 0.33", optional: Mix.env() != :dev},
       {:credo, "~> 1.0", only: :ci, runtime: false},
       {:excoveralls, "~> 0.14", only: :test, runtime: false},
       {:dialyxir, "~> 1.0", only: :ci, runtime: false},
