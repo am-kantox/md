@@ -107,7 +107,12 @@ defmodule Md.Transforms.Anchor do
       defp utf8(content) do
         content
         |> String.to_charlist()
-        |> :erlang.iolist_to_binary()
+        |> IO.iodata_to_binary()
+      rescue
+        ArgumentError ->
+          content
+          |> String.to_charlist()
+          |> IO.chardata_to_string()
       end
 
     _ ->
