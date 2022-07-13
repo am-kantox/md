@@ -48,19 +48,19 @@ defmodule Md.Transforms.Anchor do
               |> Enum.map(&Map.new/1)
               |> Enum.reduce(%{}, fn
                 %{"name" => "title", "content" => content}, acc ->
-                  put_in(acc, [Access.key("html", %{}), "title"], content)
+                  put_in(acc, [Access.key("html", %{}), "title"], utf8(content))
 
                 %{"name" => "description", "content" => content}, acc ->
-                  put_in(acc, [Access.key("html", %{}), "description"], content)
+                  put_in(acc, [Access.key("html", %{}), "description"], utf8(content))
 
                 %{"name" => "keywords", "content" => content}, acc ->
-                  put_in(acc, [Access.key("html", %{}), "keywords"], content)
+                  put_in(acc, [Access.key("html", %{}), "keywords"], utf8(content))
 
                 %{"name" => "twitter:" <> tw, "content" => content}, acc ->
-                  put_in(acc, [Access.key("twitter", %{}), tw], content)
+                  put_in(acc, [Access.key("twitter", %{}), tw], utf8(content))
 
                 %{"property" => "og:" <> og, "content" => content}, acc ->
-                  put_in(acc, [Access.key("og", %{}), og], content)
+                  put_in(acc, [Access.key("og", %{}), og], utf8(content))
 
                 _, acc ->
                   acc
@@ -102,6 +102,12 @@ defmodule Md.Transforms.Anchor do
           end
 
         {:a, %{href: url}, if(is_list(ast), do: ast, else: [url])}
+      end
+
+      defp utf8(content) do
+        content
+        |> String.to_charlist()
+        |> :erlang.iolist_to_binary()
       end
 
     _ ->
