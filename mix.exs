@@ -2,7 +2,7 @@ defmodule Md.MixProject do
   use Mix.Project
 
   @app :md
-  @version "0.8.1"
+  @version "0.8.2"
 
   def project do
     [
@@ -49,7 +49,7 @@ defmodule Md.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:xml_builder_ex, "~> 3.0"},
+      {:xml_builder_ex, "~> 3.1"},
       {:string_naming, "~> 0.7"},
       {:floki, "~> 0.33", optional: Mix.env() != :dev},
       {:credo, "~> 1.0", only: :ci, runtime: false},
