@@ -35,5 +35,6 @@ defmodule Md do
     do: with({"", state} <- Parser.parse(input, state), do: state)
 
   defdelegate generate(input), to: Md.Parser
+  defdelegate generate(input, options), to: Md.Parser
   defdelegate generate(input, parser, options), to: Md.Parser
 end
