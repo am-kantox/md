@@ -15,20 +15,7 @@ defmodule Md.Parser.Default do
 
   use Md.Parser
 
-  alias Md.Parser.Syntax.Default
+  alias Md.Parser.Syntax
 
-  @default_syntax Map.put(Default.syntax(), :settings, Default.settings())
-  @custom_syntax Application.compile_env(:md, :syntax, %{})
-  @syntax @default_syntax
-          |> Map.merge(@custom_syntax, fn
-            _k, v1, v2 ->
-              [v2, v1] |> Enum.map(&Map.new/1) |> Enum.reduce(&Map.merge/2) |> Map.to_list()
-          end)
-          |> Enum.map(fn
-            {k, v} when is_list(v) ->
-              {k, Enum.sort_by(v, &(-String.length(elem(&1, 0))))}
-
-            {k, v} ->
-              {k, v}
-          end)
+  @syntax Syntax.merge(Application.compile_env(:md, :syntax, %{}))
 end

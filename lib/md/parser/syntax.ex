@@ -77,4 +77,23 @@ defmodule Md.Parser.Syntax do
       :brace
     ]
   end
+
+  alias Md.Parser.Syntax.Default
+
+  @spec merge(t()) :: t()
+  def merge(custom, default \\ Map.put(Default.syntax(), :settings, Default.settings())) do
+    default
+    |> Map.merge(custom, fn
+      _k, v1, v2 ->
+        [v2, v1] |> Enum.map(&Map.new/1) |> Enum.reduce(&Map.merge/2) |> Map.to_list()
+    end)
+    |> Enum.map(fn
+      {k, v} when is_list(v) ->
+        {k, Enum.sort_by(v, &(-String.length(elem(&1, 0))))}
+
+      {k, v} ->
+        {k, v}
+    end)
+    |> Map.new()
+  end
 end

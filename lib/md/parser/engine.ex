@@ -19,26 +19,14 @@ defmodule Md.Engine do
     )
 
     quote generated: true, location: :keep, context: __CALLER__.module do
-      alias Md.Parser.Syntax.Void
-
       import Md.Guards
 
       syntax =
-        @syntax
-        |> Enum.reduce(
-          Void.syntax(),
-          &(&1
-            |> Map.new()
-            |> Map.merge(&2, fn _, v, v_acc -> v_acc ++ v end))
-        )
-        |> Enum.map(fn
-          {k, v} when is_list(v) ->
-            {k, v |> Enum.uniq_by(&elem(&1, 0)) |> Enum.sort_by(&(-String.length(elem(&1, 0))))}
-
-          {k, v} ->
-            {k, v}
-        end)
-        |> Keyword.put_new(:settings, Void.settings())
+        [Md.Parser.Syntax.Void.syntax() | @syntax]
+        |> Enum.reverse()
+        |> Enum.reduce(&Md.Parser.Syntax.merge/2)
+        |> Map.put_new(:settings, Md.Parser.Syntax.Void.settings())
+        |> Map.to_list()
 
       Module.delete_attribute(__MODULE__, :syntax)
       Module.register_attribute(__MODULE__, :final_syntax, accumulate: false)
