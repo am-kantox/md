@@ -46,7 +46,7 @@ defmodule Md.Parser do
   The main function transforming the MD input to XML output.
 
   `options` are passed to `XmlBuilder.generate/2` as is, save for
-    the special two special options, `parser:` and `walker:`.any()
+    the special two special options, `parser:` and `walker:`.
 
   `parser:` option which is a module implementing `Parser` behaviour,
     is telling what parser to use for parsing.
@@ -58,7 +58,7 @@ defmodule Md.Parser do
 
   If `walker:` was not passed, or a `nil` value was returned from the accumulator,
     this function returns the binary `XML` as is, otherwise it returns a tuple
-    `{XML, accumulator}` when `accumulator is what has been returned from
+    `{XML, accumulator}` where `accumulator` is what has been returned from
     underlying calls to `XmlBuilder.traverse/4`.
   """
   @spec generate(binary() | L.state(), keyword()) :: binary() | {binary(), any()}
