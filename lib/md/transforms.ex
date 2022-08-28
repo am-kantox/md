@@ -148,6 +148,6 @@ defmodule Md.Transforms.TwitterHandle do
 
   @impl Md.Transforms
   def apply(md, text) do
-    {:a, %{href: @href <> text}, [md <> text]}
+    {:a, %{href: @href <> URI.encode_www_form(text)}, [md <> text]}
   end
 end
