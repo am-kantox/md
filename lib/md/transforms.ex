@@ -29,7 +29,7 @@ defmodule Md.Transforms.Anchor do
         do: :image,
         else: Application.get_env(:md, :download_cards, false)
 
-    do_apply(url, what_to_apply)
+    url |> URI.encode_www_form() |> do_apply(what_to_apply)
   end
 
   @spec do_apply(binary(), true | false | :image) :: Md.Listener.branch()
@@ -148,6 +148,6 @@ defmodule Md.Transforms.TwitterHandle do
 
   @impl Md.Transforms
   def apply(md, text) do
-    {:a, %{href: @href <> text}, [md <> text]}
+    {:a, %{href: URI.encode_www_form(@href <> text)}, [md <> text]}
   end
 end
