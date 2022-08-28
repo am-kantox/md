@@ -80,19 +80,19 @@ defmodule MdTest do
     assert [{:p, nil, [{:a, %{href: "https://twitter.com/derek"}, ["@derek"]}, ", are you ok?"]}] ==
              Md.parse("@derek, are you ok?").ast
 
-    assert [{:p, nil, [{:a, %{href: "https://twitter.com/王"}, ["@王"]}]}, {:p, nil, ["foo"]}] ==
+    assert [{:p, nil, [{:a, %{href: "https://twitter.com/%E7%8E%8B"}, ["@王"]}]}, {:p, nil, ["foo"]}] ==
              Md.parse("@王\nfoo").ast
 
     assert [
-             {:p, nil, [{:a, %{href: "https://twitter.com/@"}, ["@@"]}]}
+             {:p, nil, [{:a, %{href: "https://twitter.com/%40"}, ["@@"]}]}
            ] == Md.parse("@@").ast
 
     assert [
-             {:p, nil, [{:a, %{href: "https://twitter.com/@bar"}, ["@@bar"]}]}
+             {:p, nil, [{:a, %{href: "https://twitter.com/%40bar"}, ["@@bar"]}]}
            ] == Md.parse("@@bar").ast
 
     assert [
-             {:p, nil, [{:a, %{href: "https://twitter.com/@@bar"}, ["@@@bar"]}]}
+             {:p, nil, [{:a, %{href: "https://twitter.com/%40%40bar"}, ["@@@bar"]}]}
            ] == Md.parse("@@@bar").ast
   end
 
