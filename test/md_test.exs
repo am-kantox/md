@@ -80,7 +80,10 @@ defmodule MdTest do
     assert [{:p, nil, [{:a, %{href: "https://twitter.com/derek"}, ["@derek"]}, ", are you ok?"]}] ==
              Md.parse("@derek, are you ok?").ast
 
-    assert [{:p, nil, [{:a, %{href: "https://twitter.com/%E7%8E%8B"}, ["@王"]}]}, {:p, nil, ["foo"]}] ==
+    assert [
+             {:p, nil, [{:a, %{href: "https://twitter.com/%E7%8E%8B"}, ["@王"]}]},
+             {:p, nil, ["foo"]}
+           ] ==
              Md.parse("@王\nfoo").ast
 
     assert [

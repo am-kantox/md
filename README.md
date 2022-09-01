@@ -141,6 +141,7 @@ Instead of `@syntax` module attribute, one might use
 
 ## Changelog
 
+- **`0.8.5`** Advanced `terminators:` in `magnet`
 - **`0.8.4`** `Md.Parser.Syntax.merge/2`
 - **`0.8.2`** `walker:` and `parser:` options in a call to `generate/2`
 - **`0.8.0`** `Md.Transforms.Anchor` supporting twitter/og cards via `Floki`

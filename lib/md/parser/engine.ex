@@ -309,7 +309,12 @@ defmodule Md.Engine do
           end
           |> Macro.escape()
 
-        terminators = properties |> Map.get(:terminators, []) |> List.wrap()
+        terminators =
+          properties
+          |> Map.get(:terminators, :ascii_punctuation)
+          |> List.wrap()
+          |> Enum.sort()
+          |> Enum.reverse()
 
         greedy = Map.get(properties, :greedy, false)
 
@@ -338,13 +343,10 @@ defmodule Md.Engine do
 
           {stock, rest} =
             case {unquote(terminators), x} do
-              {[:ascii_punctuation], x} when is_ascii_punct(x) ->
-                {pre <> stock <> post, <<x::utf8>> <> delim <> rest}
-
-              {[:utf8_punctuation], x} when is_utf8_punct(x) ->
-                {pre <> stock <> post, <<x::utf8>> <> delim <> rest}
-
-              {terminators, x} when is_list(terminators) and x in unquote(terminators) ->
+              {[terminator | _] = terminators, x}
+              when (terminator == :ascii_punctuation and is_ascii_punct(x)) or
+                     (terminator == :utf8_punctuation and is_utf8_punct(x)) or
+                     x in unquote(terminators) ->
                 {pre <> stock <> post, <<x::utf8>> <> delim <> rest}
 
               _ ->

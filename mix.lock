@@ -1,6 +1,6 @@
 %{
   "benchfella": {:hex, :benchfella, "0.3.5", "b2122c234117b3f91ed7b43b6e915e19e1ab216971154acd0a80ce0e9b8c05f5", [:mix], [], "hexpm", "23f27cbc482cbac03fc8926441eb60a5e111759c17642bac005c3225f5eb809d"},
-  "bunt": {:hex, :bunt, "0.2.0", "951c6e801e8b1d2cbe58ebbd3e616a869061ddadcc4863d0a2182541acae9a38", [:mix], [], "hexpm", "7af5c7e09fe1d40f76c8e4f9dd2be7cebd83909f31fee7cd0e9eadc567da8353"},
+  "bunt": {:hex, :bunt, "0.2.1", "e2d4792f7bc0ced7583ab54922808919518d0e57ee162901a16a1b6664ef3b14", [:mix], [], "hexpm", "a330bfb4245239787b15005e66ae6845c9cd524a288f0d141c148b02603777a5"},
   "certifi": {:hex, :certifi, "2.9.0", "6f2a475689dd47f19fb74334859d460a2dc4e3252a3324bd2111b8f0429e7e21", [:rebar3], [], "hexpm", "266da46bdb06d6c6d35fde799bcb28d36d985d424ad7c08b5bb48f5b5cdd4641"},
   "credo": {:hex, :credo, "1.6.6", "f51f8d45db1af3b2e2f7bee3e6d3c871737bda4a91bff00c5eec276517d1a19c", [:mix], [{:bunt, "~> 0.2.0", [hex: :bunt, repo: "hexpm", optional: false]}, {:file_system, "~> 0.2.8", [hex: :file_system, repo: "hexpm", optional: false]}, {:jason, "~> 1.0", [hex: :jason, repo: "hexpm", optional: false]}], "hexpm", "625520ce0984ee0f9f1f198165cd46fa73c1e59a17ebc520038b8fce056a5bdc"},
   "dialyxir": {:hex, :dialyxir, "1.2.0", "58344b3e87c2e7095304c81a9ae65cb68b613e28340690dfe1a5597fd08dec37", [:mix], [{:erlex, ">= 0.2.6", [hex: :erlex, repo: "hexpm", optional: false]}], "hexpm", "61072136427a851674cab81762be4dbeae7679f85b1272b6d25c3a839aff8463"},
@@ -26,5 +26,5 @@
   "string_naming": {:hex, :string_naming, "0.7.3", "bc187567ea2b2d0b83a9df8f105ec34b22ea0b738d96a4c32ed18c756fd2b5dc", [:mix], [], "hexpm", "63150a7420deed0e93040b606da16750ce902116855e326f51b4d5bc5ac7e92a"},
   "unicode_util_compat": {:hex, :unicode_util_compat, "0.7.0", "bc84380c9ab48177092f43ac89e4dfa2c6d62b40b8bd132b1059ecc7232f9a78", [:rebar3], [], "hexpm", "25eee6d67df61960cf6a794239566599b09e17e668d3700247bc498638152521"},
   "xml_builder": {:hex, :xml_builder, "2.2.0", "cc5f1eeefcfcde6e90a9b77fb6c490a20bc1b856a7010ce6396f6da9719cbbab", [:mix], [], "hexpm", "9d66d52fb917565d358166a4314078d39ef04d552904de96f8e73f68f64a62c9"},
-  "xml_builder_ex": {:hex, :xml_builder_ex, "3.1.1", "6c02514aceda54a1628d86dbbd11d01184f6fec9abe3bf3d42132e76d539c14b", [:mix], [], "hexpm", "4efb0f62081909677e11a5f5d6dd4f5507db9e407d18e990ebb01919fdab46b6"},
+  "xml_builder_ex": {:hex, :xml_builder_ex, "3.1.4", "51ed01bbe899d5b6e709a17b57dd3de0fbbdbb15c5a6757161bae9e141f76deb", [:mix], [], "hexpm", "699795ac95202cf74d7a045ee4416119c611886c25ed33819bcfd64d874b0376"},
 }
