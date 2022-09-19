@@ -141,7 +141,8 @@ Instead of `@syntax` module attribute, one might use
 
 ## Changelog
 
-- **`0.8.5`** Advanced `terminators:` in `magnet`
+- **`0.9.0`** use `unicode_set` instead of `string_naming` by default for guards
+- **`0.8.5`** advanced `terminators:` in `magnet`
 - **`0.8.4`** `Md.Parser.Syntax.merge/2`
 - **`0.8.2`** `walker:` and `parser:` options in a call to `generate/2`
 - **`0.8.0`** `Md.Transforms.Anchor` supporting twitter/og cards via `Floki`
