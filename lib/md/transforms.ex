@@ -38,9 +38,11 @@ defmodule Md.Transforms.Anchor do
 
   case Code.ensure_compiled(Floki) do
     {:module, Floki} ->
+      @httpc_options Application.compile_env(:md, :httpc_options, [])
       defp do_apply(url, true) do
         ast =
-          with {:ok, {{_proto, 200, _ok}, _headers, html}} <- :httpc.request(url),
+          with {:ok, {{_proto, 200, _ok}, _headers, html}} <-
+                 :httpc.request(:get, {url, []}, @httpc_options, []),
                {:ok, document} <- Floki.parse_document(html),
                metas <- Floki.find(document, "meta") do
             data =

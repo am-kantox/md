@@ -1416,11 +1416,11 @@ defmodule Md.Engine do
 
       @spec maybe_flip_flop(String.t(), Md.Listener.state(), String.t()) ::
               {String.t(), Md.Listener.state()}
-      defp maybe_flip_flop(<<?\s, trimmed::binary()>>, state, rest),
+      defp maybe_flip_flop(<<?\s, trimmed::binary>>, state, rest),
         do: maybe_flip_flop(trimmed, state, rest)
 
       Enum.each(@linebreaks, fn lb ->
-        defp maybe_flip_flop(<<unquote(lb), _::binary()>> = trimmed, state, rest),
+        defp maybe_flip_flop(<<unquote(lb), _::binary>> = trimmed, state, rest),
           do: {trimmed, flip_flop_state(state)}
       end)
 
