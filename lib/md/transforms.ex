@@ -8,20 +8,6 @@ defmodule Md.Transforms.Anchor do
   @moduledoc false
   @behaviour Md.Transforms
 
-  @spec dig(map(), binary()) :: nil | binary()
-  defp dig(data, key) do
-    get_in(data, ["html", key]) || get_in(data, ["twitter", key]) || get_in(data, ["og", key])
-  end
-
-  @spec dig_image_size(map()) :: nil | {non_neg_integer(), non_neg_integer()}
-  defp dig_image_size(data) do
-    case data do
-      %{"og" => %{"image:width" => w, "image:height" => h}} -> {w, h}
-      %{"twitter" => %{"card" => "summary_large_image"}} -> {640, 480}
-      _ -> {480, 360}
-    end
-  end
-
   @impl Md.Transforms
   def apply(_md, url) do
     what_to_apply =
@@ -39,6 +25,7 @@ defmodule Md.Transforms.Anchor do
   case Code.ensure_compiled(Floki) do
     {:module, Floki} ->
       @httpc_options Application.compile_env(:md, :httpc_options, [])
+
       defp do_apply(url, true) do
         ast =
           with {:ok, {{_proto, 200, _ok}, _headers, html}} <-
@@ -104,6 +91,20 @@ defmodule Md.Transforms.Anchor do
           end
 
         {:a, %{href: url}, if(is_list(ast), do: ast, else: [url])}
+      end
+
+      @spec dig(map(), binary()) :: nil | binary()
+      defp dig(data, key) do
+        get_in(data, ["html", key]) || get_in(data, ["twitter", key]) || get_in(data, ["og", key])
+      end
+
+      @spec dig_image_size(map()) :: nil | {non_neg_integer(), non_neg_integer()}
+      defp dig_image_size(data) do
+        case data do
+          %{"og" => %{"image:width" => w, "image:height" => h}} -> {w, h}
+          %{"twitter" => %{"card" => "summary_large_image"}} -> {640, 480}
+          _ -> {480, 360}
+        end
       end
 
       defp utf8(content) do
