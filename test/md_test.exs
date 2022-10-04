@@ -125,8 +125,34 @@ defmodule MdTest do
 
     assert %Md.Parser.State{
              mode: [:finished],
-             ast: [{:dl, nil, [{:dt, nil, ["T1"]}, "\n", {:dd, nil, ["D1"]}, "\n", {:dt, nil, ["T2"]}, {:dd, nil, ["D2"]}]}]
+             ast: [
+               {:dl, nil,
+                [
+                  {:dt, nil, ["T1"]},
+                  "\n",
+                  {:dd, nil, ["D1"]},
+                  "\n",
+                  {:dt, nil, ["T2"]},
+                  {:dd, nil, ["D2"]}
+                ]}
+             ]
            } = Md.parse("<dl>\n<dt>T1</dt>\n<dd>D1</dd>\n<dt>T2</dt><dd>D2</dd>\n</dl>")
+
+    assert %Md.Parser.State{
+             mode: [:finished],
+             ast: [
+               {:dl, nil,
+                [
+                  {:dt, nil, [{:b, nil, ["T1"]}]},
+                  "\n",
+                  {:dd, nil, [{:i, nil, ["D1"]}]},
+                  "\n",
+                  {:dt, nil, ["T2"]},
+                  "\n",
+                  {:dd, nil, ["D2"]}
+                ]}
+             ]
+           } = Md.parse("<dl>\n<dt>*T1*</dt>\n<dd>_D1_\n</dd>\n<dt>T2</dt>\n<dd>D2</dd>\n</dl>")
   end
 
   test "block" do
