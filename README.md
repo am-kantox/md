@@ -141,6 +141,7 @@ Instead of `@syntax` module attribute, one might use
 
 ## Changelog
 
+- **`0.9.3`** adds `class: "empty-tag"` to empty tags to allow their display supression
 - **`0.9.2`** nested tags shallow support, default support for `<dl>`
 - **`0.9.1`** accept `config :md, :httpc_options` config used with `Floki` in TwitterCard/OG retrieval
 - **`0.9.0`** use `unicode_set` instead of `string_naming` by default for guards
