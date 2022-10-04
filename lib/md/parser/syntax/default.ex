@@ -120,7 +120,10 @@ defmodule Md.Parser.Syntax.Default do
         {"[^", %{closing: "]", tag: :b, mode: :raw}}
       ],
       tag: [
-        {"sup", %{}}
+        {"sup", %{}},
+        {"dl", %{}},
+        {"dt", %{}},
+        {"dd", %{}}
       ]
     }
   end

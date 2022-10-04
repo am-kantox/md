@@ -122,6 +122,11 @@ defmodule MdTest do
                {:p, nil, ["hello", {:sup, nil, ["2"]}]}
              ]
            } = Md.parse("   hello<sup>2</sup>")
+
+    assert %Md.Parser.State{
+             mode: [:finished],
+             ast: [{:dl, nil, [{:dt, nil, ["T1"]}, "\n", {:dd, nil, ["D1"]}, "\n", {:dt, nil, ["T2"]}, {:dd, nil, ["D2"]}]}]
+           } = Md.parse("<dl>\n<dt>T1</dt>\n<dd>D1</dd>\n<dt>T2</dt><dd>D2</dd>\n</dl>")
   end
 
   test "block" do

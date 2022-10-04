@@ -1155,7 +1155,8 @@ defmodule Md.Engine do
           state =
             state
             |> to_ast()
-            |> pop_mode(unquote(mode))
+            |> pop_mode([{:linefeed, 0}, unquote(mode)])
+            |> push_mode(unquote(mode))
 
           do_parse(rest, state)
         end
