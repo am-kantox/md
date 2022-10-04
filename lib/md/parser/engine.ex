@@ -35,6 +35,8 @@ defmodule Md.Engine do
       @linebreaks get_in(syntax, [:settings, :linebreaks]) || [<<?\n>>]
       @linebreak List.first(@linebreaks) || <<?\n>>
 
+      @empty_tags get_in(syntax, [:settings, :empty_tags]) || []
+
       Md.Engine.macros()
       Md.Engine.init()
 
@@ -1534,6 +1536,7 @@ defmodule Md.Engine do
           |> reverse()
           |> update_attrs(pop)
           |> trim(false)
+          |> maybe_hide()
 
         state = %Md.Parser.State{state | path: [], ast: [last | ast]}
         listener(state, {:tag, tag, false})
@@ -1548,6 +1551,7 @@ defmodule Md.Engine do
           |> reverse()
           |> update_attrs(pop)
           |> trim(false)
+          |> maybe_hide()
 
         state = %Md.Parser.State{state | path: [{elem, attrs, [last | branch]} | rest]}
         listener(state, {:tag, tag, false})
@@ -1571,6 +1575,14 @@ defmodule Md.Engine do
         branch = Enum.reject(branch, &match?("", &1))
         if reverse?, do: {elem, attrs, Enum.reverse(branch)}, else: {elem, attrs, branch}
       end
+
+      @spec maybe_hide(Md.Listener.trace()) :: Md.Listener.trace()
+      defp maybe_hide({tag, _attrs, _branch} = trace) when tag in @empty_tags, do: trace
+
+      defp maybe_hide({tag, attrs, []}),
+        do: {tag, Map.put(attrs || %{}, :class, :"empty-tag"), []}
+
+      defp maybe_hide({_tag, _attrs, _branch} = trace), do: trace
 
       @spec to_s([Md.Listener.trace()]) :: String.t()
       defp to_s(ast) do

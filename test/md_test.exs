@@ -315,20 +315,31 @@ defmodule MdTest do
              Md.parse("\n> line 1\n> \n> line2").ast
 
     assert [
-             {:blockquote, nil, [{:p, nil, ["line 1", "\n", {:i, nil, []}, "line 2"]}]}
+             {:blockquote, nil,
+              [{:p, nil, ["line 1", "\n", {:i, %{class: :"empty-tag"}, []}, "line 2"]}]}
            ] ==
              Md.parse(">line 1\n>_\n>line 2").ast
 
     assert [
              {:blockquote, nil,
-              [{:p, nil, ["line 1", "\n", {:em, nil, [{:i, nil, []}]}, "line 2"]}]}
+              [
+                {:p, nil,
+                 ["line 1", "\n", {:em, nil, [{:i, %{class: :"empty-tag"}, []}]}, "line 2"]}
+              ]}
            ] ==
              Md.parse(">line 1\n>___\n>line 2").ast
 
     assert [
              {:blockquote, nil,
               [
-                {:p, nil, ["line 1", "\n", {:em, nil, []}, {:em, nil, [{:i, nil, []}]}, "line 2"]}
+                {:p, nil,
+                 [
+                   "line 1",
+                   "\n",
+                   {:em, %{class: :"empty-tag"}, []},
+                   {:em, nil, [{:i, %{class: :"empty-tag"}, []}]},
+                   "line 2"
+                 ]}
               ]}
            ] ==
              Md.parse(">line 1\n>_______\n>line 2").ast
