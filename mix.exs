@@ -2,7 +2,7 @@ defmodule Md.MixProject do
   use Mix.Project
 
   @app :md
-  @version "0.9.3"
+  @version "0.9.4"
 
   def project do
     [

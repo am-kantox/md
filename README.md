@@ -141,6 +141,7 @@ Instead of `@syntax` module attribute, one might use
 
 ## Changelog
 
+- **`0.9.4`** adds `class: "empty-anchor"` to tags expecting attributes to be set, fixed :ant: with nested brackets
 - **`0.9.3`** adds `class: "empty-tag"` to empty tags to allow their display supression
 - **`0.9.2`** nested tags shallow support, default support for `<dl>`
 - **`0.9.1`** accept `config :md, :httpc_options` config used with `Floki` in TwitterCard/OG retrieval
