@@ -9,7 +9,8 @@ defmodule Md.Parser.Syntax do
           optional(:span) => atom(),
           optional(:linebreaks) => [binary()],
           optional(:disclosure_range) => Range.t(),
-          optional(:empty_tags) => [atom()]
+          optional(:empty_tags) => [atom()],
+          optional(:requiring_attributes_tags) => [atom()]
         }
 
   @typedoc "Syntax item definition"

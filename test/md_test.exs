@@ -442,6 +442,12 @@ defmodule MdTest do
                 "!"
               ]}
            ] == Md.parse(input).ast
+
+    assert [{:span, %{class: "empty-anchor"}, [{:a, %{href: "https://foo.com"}, ["TEST"]}, "]"]}] =
+             Md.parse("[[TEST](https://foo.com)]").ast
+
+    assert [{:p, nil, ["[", {:a, %{href: "https://foo.com"}, ["TEST"]}, "]"]}] =
+             Md.parse("\\[[TEST](https://foo.com)]").ast
   end
 
   test "pairs (img)" do

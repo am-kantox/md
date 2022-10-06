@@ -36,6 +36,7 @@ defmodule Md.Engine do
       @linebreak List.first(@linebreaks) || <<?\n>>
 
       @empty_tags get_in(syntax, [:settings, :empty_tags]) || []
+      @requiring_attributes_tags get_in(syntax, [:settings, :requiring_attributes_tags]) || []
 
       Md.Engine.macros()
       Md.Engine.init()
@@ -826,7 +827,7 @@ defmodule Md.Engine do
                    path: [{unquote(tag), _attrs, [content]} | path_tail]
                  } = state
                )
-               when mode not in [:raw, {:inner, :raw}] do
+               when mode not in [:raw, {:inner, :raw}] and is_binary(content) do
             content = unquote(disclosure_opening) <> content <> unquote(disclosure_closing)
             state = push_char(%Md.Parser.State{state | path: path_tail}, content)
             do_parse(rest, state)
@@ -840,7 +841,7 @@ defmodule Md.Engine do
                    path: [{unquote(tag), attrs, [content]} | path_tail]
                  } = state
                )
-               when mode not in [:raw, {:inner, :raw}] do
+               when mode not in [:raw, {:inner, :raw}] and is_binary(content) do
             content = unquote(disclosure_opening) <> content <> unquote(disclosure_closing)
 
             final_tag =
@@ -1578,6 +1579,9 @@ defmodule Md.Engine do
 
       @spec maybe_hide(Md.Listener.trace()) :: Md.Listener.trace()
       defp maybe_hide({tag, _attrs, _branch} = trace) when tag in @empty_tags, do: trace
+
+      defp maybe_hide({tag, nil, content}) when tag in @requiring_attributes_tags,
+        do: {nest(:span), %{class: "empty-anchor"}, content}
 
       defp maybe_hide({tag, attrs, []}),
         do: {tag, Map.put(attrs || %{}, :class, :"empty-tag"), []}
