@@ -31,9 +31,12 @@ defmodule Md.Transforms.Anchor do
           with {:ok, {{_proto, 200, _ok}, _headers, html}} <-
                  :httpc.request(:get, {url, []}, @httpc_options, []),
                {:ok, document} <- Floki.parse_document(html),
+               title <- Floki.find(document, "title"),
                metas <- Floki.find(document, "meta") do
+            title = Enum.map_join(title, " • ", fn {"title", [], title} -> title end)
+
             data =
-              for({"meta", props, []} <- metas, do: props)
+              for({"meta", props, _} <- metas, do: props)
               |> Enum.map(&Map.new/1)
               |> Enum.reduce(%{}, fn
                 %{"name" => "title", "content" => content}, acc ->
@@ -48,11 +51,18 @@ defmodule Md.Transforms.Anchor do
                 %{"name" => "twitter:" <> tw, "content" => content}, acc ->
                   put_in(acc, [Access.key("twitter", %{}), tw], utf8(content))
 
+                %{"property" => "twitter:" <> tw, "content" => content}, acc ->
+                  put_in(acc, [Access.key("twitter", %{}), tw], utf8(content))
+
                 %{"property" => "og:" <> og, "content" => content}, acc ->
                   put_in(acc, [Access.key("og", %{}), og], utf8(content))
 
                 _, acc ->
                   acc
+              end)
+              |> update_in([Access.key("html", %{}), "title"], fn
+                nil -> utf8(title)
+                title -> title
               end)
 
             data = %{
