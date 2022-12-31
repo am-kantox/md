@@ -33,10 +33,13 @@ defmodule Md.Transforms.Anchor do
                {:ok, document} <- Floki.parse_document(html),
                title <- Floki.find(document, "title"),
                metas <- Floki.find(document, "meta") do
-            title = Enum.map_join(title, " • ", fn {"title", [], title} -> title end)
+            title =
+              title
+              |> Enum.filter(&match?({"title", _, [<<_::binary-size(3), _::binary>>]}, &1))
+              |> Enum.map_join(" • ", fn {"title", _, [title]} -> utf8(title) end)
 
             data =
-              for({"meta", props, _} <- metas, do: props)
+              for({"meta", props, []} <- metas, do: props)
               |> Enum.map(&Map.new/1)
               |> Enum.reduce(%{}, fn
                 %{"name" => "title", "content" => content}, acc ->
