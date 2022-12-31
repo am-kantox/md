@@ -29,8 +29,8 @@ defmodule Md.Guards do
     [digits, punctuation, spaces] =
       [~r/digit/i, ~r/punct/i, ~r/space/i]
       |> Enum.map(fn re ->
-        re
-        |> StringNaming.graphemes(false)
+        StringNaming
+        |> apply(:graphemes, [re, false])
         |> Enum.map_join(&elem(&1, 1))
         |> to_charlist()
       end)
