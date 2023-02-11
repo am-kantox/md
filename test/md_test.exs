@@ -3,6 +3,19 @@ defmodule MdTest do
   doctest Md
   doctest Md.Guards
 
+  test "reported issues" do
+    input = "test\n    - A\n  - B\n  - C\n"
+
+    assert %Md.Parser.State{
+             mode: [:finished],
+             ast: [
+               {:p, nil, ["test"]},
+               {:ul, nil, [{:li, nil, ["A"]}, {:li, nil, ["B"]}]},
+               {:ul, nil, [{:li, nil, ["C"]}]}
+             ]
+           } = Md.parse(input)
+  end
+
   test "leading spaces" do
     assert %Md.Parser.State{
              mode: [:finished],

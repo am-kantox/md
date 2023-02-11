@@ -1095,7 +1095,7 @@ defmodule Md.Engine do
                 |> rewind_state(
                   until: unquote(outer),
                   count: Enum.count(skipped),
-                  inclusive: true
+                  inclusive: indents != []
                 )
                 |> listener({:tag, {unquote(md), unquote(tag)}, true})
                 |> push_path({unquote(tag), unquote(attrs), []})
@@ -1127,8 +1127,15 @@ defmodule Md.Engine do
           do_parse(rest, state)
         end
 
-        defp do_parse(<<unquote(md), _::binary>> = input, state_linefeed()) do
-          state = rewind_state(state, until: unquote(tag))
+        defp do_parse(<<unquote(md), _rest::binary>> = input, state_linefeed()) do
+          state =
+            state
+            |> rewind_state(until: unquote(tag))
+            |> case do
+              ^state -> rewind_state(state)
+              state -> state
+            end
+
           do_parse(input, state)
         end
       end)
@@ -1454,28 +1461,47 @@ defmodule Md.Engine do
             ]) :: Md.Listener.state()
       defp rewind_state(state, params \\ []) do
         pop = Keyword.get(params, :pop, %{})
-        until = Keyword.get(params, :until, nil)
+        until = params |> Keyword.get(:until) |> List.wrap()
         trim = Keyword.get(params, :trim, false)
         count = Keyword.get(params, :count, 1)
         inclusive = Keyword.get(params, :inclusive, false)
+
+        content_fun = fn content, acc, pop ->
+          if Enum.all?(content, &is_binary/1) and
+               content |> Enum.join() |> String.trim() == "",
+             do: {:cont, {true, %Md.Parser.State{acc | path: tl(acc.path)}}},
+             else: {:cont, {false, to_ast(acc, pop)}}
+        end
+
+        reducer =
+          case until do
+            [] ->
+              fn
+                {_, _, content}, {true, acc} -> content_fun.(content, acc, pop)
+                _, {_, acc} -> {:cont, {false, to_ast(acc, pop)}}
+              end
+
+            [until] ->
+              fn
+                {^until, _, _}, acc -> {:halt, acc}
+                {_, _, content}, {true, acc} -> content_fun.(content, acc, pop)
+                _, {_, acc} -> {:cont, {false, to_ast(acc, pop)}}
+              end
+
+            [until1, until2] ->
+              fn
+                {^until1, _, _}, acc -> {:halt, acc}
+                {^until2, _, _}, acc -> {:halt, acc}
+                {_, _, content}, {true, acc} -> content_fun.(content, acc, pop)
+                _, {_, acc} -> {:cont, {false, to_ast(acc, pop)}}
+              end
+          end
 
         for i <- 1..count, count > 0, reduce: state do
           acc ->
             state =
               acc.path
-              |> Enum.reduce_while({trim, acc}, fn
-                {^until, _, _}, acc ->
-                  {:halt, acc}
-
-                {_, _, content}, {true, acc} ->
-                  if Enum.all?(content, &is_binary/1) and
-                       content |> Enum.join() |> String.trim() == "",
-                     do: {:cont, {true, %Md.Parser.State{acc | path: tl(acc.path)}}},
-                     else: {:cont, {false, to_ast(acc, pop)}}
-
-                _, {_, acc} ->
-                  {:cont, {false, to_ast(acc, pop)}}
-              end)
+              |> Enum.reduce_while({trim, acc}, reducer)
               |> elem(1)
 
             if i < count or inclusive, do: to_ast(state, pop), else: state
