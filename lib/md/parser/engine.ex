@@ -411,8 +411,8 @@ defmodule Md.Engine do
               |> listener({:custom, {unquote(md), unquote(handler)}, nil})
 
             {continuation, state} =
-              case handler do
-                module when is_atom(module) -> module.do_parse(rest, state)
+              case unquote(handler) do
+                module when is_atom(module) -> module.parse(rest, state)
                 fun when is_function(fun, 2) -> fun.(rest, state)
               end
 

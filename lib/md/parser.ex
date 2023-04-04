@@ -14,10 +14,10 @@ defmodule Md.Parser do
   # config/prod.exs
 
   config :md, syntax: %{
-    custom: %{
-      {"![", MyApp.Parsers.Img},
+    custom: [
+      {"![", {MyApp.Parsers.Img, %{}}},
       ...
-    }
+    ]
   }
   ```
 
@@ -118,8 +118,10 @@ defmodule Md.Parser do
       @behaviour Md.Parser
 
       @impl Md.Parser
-      def parse(input, state \\ %State{}) do
-        %State{ast: ast, path: []} = state = do_parse(input, state)
+      def parse(input, state \\ %State{})
+
+      def parse(input, state) do
+          %State{ast: ast, path: []} = state = do_parse(input, state)
         {"", %State{state | ast: Enum.reverse(ast)}}
       end
     end
