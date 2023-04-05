@@ -121,7 +121,7 @@ defmodule Md.Parser do
       def parse(input, state \\ %State{})
 
       def parse(input, state) do
-          %State{ast: ast, path: []} = state = do_parse(input, state)
+        %State{ast: ast, path: []} = state = do_parse(input, state)
         {"", %State{state | ast: Enum.reverse(ast)}}
       end
     end

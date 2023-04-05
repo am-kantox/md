@@ -30,6 +30,7 @@ defmodule Md.Guards do
       [~r/digit/i, ~r/punct/i, ~r/space/i]
       |> Enum.map(fn re ->
         StringNaming
+        # credo:disable-for-next-line Credo.Check.Refactor.Apply
         |> apply(:graphemes, [re, false])
         |> Enum.map_join(&elem(&1, 1))
         |> to_charlist()
