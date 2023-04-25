@@ -1039,12 +1039,16 @@ defmodule Md.Engine do
             state
             |> listener({:tag, {unquote(md), unquote(outer)}, true})
             |> listener({:tag, {unquote(md), unquote(tag)}, true})
-            |> replace_mode({:inner, {unquote(tag), unquote(outer)}, pos})
+            |> pop_mode([{:linefeed, pos}, :md])
+            |> push_mode({:inner, {unquote(tag), unquote(outer)}, pos})
             |> push_path(
               for tag <- [unquote(outer) | unquote(tags)], do: {tag, unquote(attrs), []}
             )
 
-          do_parse(rest, %Md.Parser.State{state | bag: %{state.bag | indent: [pos]}})
+          do_parse(rest, %Md.Parser.State{
+            state
+            | bag: %{state.bag | indent: [pos | state.bag.indent]}
+          })
         end
 
         defp do_parse(
@@ -1052,16 +1056,20 @@ defmodule Md.Engine do
                %Md.Parser.State{
                  mode: [mode | _],
                  path: [{unquote(tag), _, _}, {unquote(outer), _, _} | _],
-                 bag: %{indent: [indent | _] = indents}
+                 bag: %{indent: indents}
                } = state
              )
              when mode not in [:raw, {:inner, :raw}, :md] do
+          # AM [FIXME] This is likely redundant in favour of LINE 1138 clause
+          [indent | _] = indents = if [] == indents, do: [0], else: indents
+
           case mode do
             {:linefeed, pos} ->
               state =
                 state
                 |> rewind_state(until: unquote(tag))
-                |> replace_mode({:inner, {unquote(tag), unquote(outer)}, pos})
+                |> pop_mode([{:linefeed, pos}, :md])
+                |> push_mode({:inner, {unquote(tag), unquote(outer)}, pos})
 
               do_parse(input, state)
 
@@ -1088,14 +1096,14 @@ defmodule Md.Engine do
               do_parse(rest, %Md.Parser.State{state | bag: %{state.bag | indent: [pos | indents]}})
 
             {:inner, {unquote(tag), unquote(outer)}, pos} when pos < indent ->
-              {skipped, indents} = Enum.split_with(indents, &(&1 > pos))
+              {skipped, indents} = Enum.split_while(indents, &(&1 > pos))
 
               state =
                 state
                 |> rewind_state(
                   until: unquote(outer),
                   count: Enum.count(skipped),
-                  inclusive: indents != []
+                  inclusive: true
                 )
                 |> listener({:tag, {unquote(md), unquote(tag)}, true})
                 |> push_path({unquote(tag), unquote(attrs), []})
@@ -1127,16 +1135,48 @@ defmodule Md.Engine do
           do_parse(rest, state)
         end
 
-        defp do_parse(<<unquote(md), _rest::binary>> = input, state_linefeed()) do
+        defp do_parse(<<unquote(md), rest::binary>> = input, state_linefeed()) do
+          state = pop_mode(state, [{:linefeed, pos}, :md])
+
           state =
-            state
-            |> rewind_state(until: unquote(tag))
-            |> case do
-              ^state -> rewind_state(state)
-              state -> state
+            case state.bag.indent do
+              indents when indents == [] or pos > hd(indents) ->
+                state =
+                  state
+                  |> rewind_state(until: unquote(tag), inclusive: true)
+                  |> listener({:tag, {unquote(md), unquote(outer)}, true})
+                  |> listener({:tag, {unquote(md), unquote(tag)}, true})
+                  |> push_path(
+                    for tag <- [unquote(outer) | unquote(tags)], do: {tag, unquote(attrs), []}
+                  )
+
+                %Md.Parser.State{state | bag: %{state.bag | indent: [pos | indents]}}
+
+              [^pos | _] ->
+                state
+                |> rewind_state(until: unquote(tag), inclusive: true)
+                |> listener({:tag, {unquote(md), unquote(tag)}, true})
+                |> push_path({unquote(tag), unquote(attrs), []})
+
+              [indent | _] when pos < indent ->
+                {_, indents} = Enum.split_with(state.bag.indent, &(&1 > pos))
+
+                state =
+                  state.mode
+                  |> Enum.reduce_while(state, fn
+                    {:inner, {unquote(tag), rewind_until}, indent}, state when indent > pos ->
+                      {:cont, rewind_state(state, until: rewind_until, inclusive: true)}
+
+                    _, state ->
+                      {:halt, state}
+                  end)
+                  |> listener({:tag, {unquote(md), unquote(tag)}, true})
+                  |> push_path({unquote(tag), unquote(attrs), []})
+
+                %Md.Parser.State{state | bag: %{state.bag | indent: [pos | indents]}}
             end
 
-          do_parse(input, state)
+          do_parse(rest, state)
         end
       end)
     end

@@ -3,19 +3,6 @@ defmodule MdTest do
   doctest Md
   doctest Md.Guards
 
-  test "reported issues" do
-    input = "test\n    - A\n  - B\n  - C\n"
-
-    assert %Md.Parser.State{
-             mode: [:finished],
-             ast: [
-               {:p, nil, ["test"]},
-               {:ul, nil, [{:li, nil, ["A"]}, {:li, nil, ["B"]}]},
-               {:ul, nil, [{:li, nil, ["C"]}]}
-             ]
-           } = Md.parse(input)
-  end
-
   test "leading spaces" do
     assert %Md.Parser.State{
              mode: [:finished],
@@ -235,6 +222,20 @@ defmodule MdTest do
            ] == Md.parse(input).ast
   end
 
+  test "nested list starting with a deep nest" do
+    input = "test\n    - A\n  - B\n  - C\n"
+
+    assert %Md.Parser.State{
+             mode: [:finished],
+             ast: [
+               {:p, nil, ["test"]},
+               {:ul, nil, [{:li, nil, ["A"]}]},
+               {:li, nil, ["B"]},
+               {:ul, nil, [{:li, nil, ["C"]}]}
+             ]
+           } = Md.parse(input)
+  end
+
   test "nested list" do
     input = """
     - 1 | 1
@@ -279,6 +280,57 @@ defmodule MdTest do
                  [
                    {:li, nil, ["2 | 1"]},
                    {:ul, nil, [{:li, nil, ["3 | 1"]}, {:ul, nil, [{:li, nil, ["4 | 1"]}]}]},
+                   {:li, nil, ["2 | 2"]}
+                 ]},
+                {:li, nil, ["1 | 2"]}
+              ]}
+           ] == Md.parse(input).ast
+  end
+
+  test "nested list containing different types of lists" do
+    input = """
+    1. 1 | 1
+      - 2 | 1
+      - 2 | 2
+    2. 1 | 2
+      - 2 | 3
+    3. 1 | 3
+    """
+
+    assert [
+             {:ol, nil,
+              [
+                {:li, nil, ["1 | 1"]},
+                {:ul, nil,
+                 [
+                   {:li, nil, ["2 | 1"]},
+                   {:li, nil, ["2 | 2"]}
+                 ]},
+                {:li, nil, ["1 | 2"]},
+                {:ul, nil, [{:li, nil, ["2 | 3"]}]},
+                {:li, nil, ["1 | 3"]}
+              ]}
+           ] == Md.parse(input).ast
+  end
+
+  test "deeply nested list containing different types of lists" do
+    input = """
+    1. 1 | 1
+      - 2 | 1
+        - 3 | 1
+          1. 4 | 1
+      - 2 | 2
+    2. 1 | 2
+    """
+
+    assert [
+             {:ol, nil,
+              [
+                {:li, nil, ["1 | 1"]},
+                {:ul, nil,
+                 [
+                   {:li, nil, ["2 | 1"]},
+                   {:ul, nil, [{:li, nil, ["3 | 1"]}, {:ol, nil, [{:li, nil, ["4 | 1"]}]}]},
                    {:li, nil, ["2 | 2"]}
                  ]},
                 {:li, nil, ["1 | 2"]}
