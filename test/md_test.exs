@@ -313,6 +313,30 @@ defmodule MdTest do
            ] == Md.parse(input).ast
   end
 
+  test "nested list containing different types of lists with one and then only child" do
+    input = """
+    1. 1 | 1
+      - 2 | 1
+    2. 1 | 2
+      - 2 | 3
+    3. 1 | 3
+    """
+
+    assert [
+             {:ol, nil,
+              [
+                {:li, nil, ["1 | 1"]},
+                {:ul, nil,
+                 [
+                   {:li, nil, ["2 | 1"]},
+                 ]},
+                {:li, nil, ["1 | 2"]},
+                {:ul, nil, [{:li, nil, ["2 | 3"]}]},
+                {:li, nil, ["1 | 3"]}
+              ]}
+           ] == Md.parse(input).ast
+  end
+
   test "deeply nested list containing different types of lists" do
     input = """
     1. 1 | 1

@@ -1067,8 +1067,8 @@ defmodule Md.Engine do
             {:linefeed, pos} ->
               state =
                 state
-                |> rewind_state(until: unquote(tag))
                 |> pop_mode([{:linefeed, pos}, :md])
+                |> rewind_state(until: unquote(tag))
                 |> push_mode({:inner, {unquote(tag), unquote(outer)}, pos})
 
               do_parse(input, state)
@@ -1164,16 +1164,16 @@ defmodule Md.Engine do
                 state =
                   state.mode
                   |> Enum.reduce_while(state, fn
-                    {:inner, {unquote(tag), rewind_until}, indent}, state when indent > pos ->
-                      {:cont, rewind_state(state, until: rewind_until, inclusive: true)}
+                    {:inner, {unquote(tag), rewind_until}, indent}, state when indent >= pos ->
+                      {:cont, rewind_state(state, until: rewind_until, inclusive: indent > pos)}
 
-                    _, state ->
+                    other, state ->
                       {:halt, state}
                   end)
                   |> listener({:tag, {unquote(md), unquote(tag)}, true})
                   |> push_path({unquote(tag), unquote(attrs), []})
 
-                %Md.Parser.State{state | bag: %{state.bag | indent: [pos | indents]}}
+                %Md.Parser.State{state | bag: %{state.bag | indent: indents}}
             end
 
           do_parse(rest, state)
