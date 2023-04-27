@@ -36,7 +36,7 @@ defmodule Md.Guards do
         |> to_charlist()
       end)
 
-    punctuation = punctuation -- '_'
+    punctuation = punctuation -- ~c"_"
     spaces = [?\n, ?\r | spaces]
 
     {ascii_spaces, non_ascii_spaces} = Enum.split_with(spaces, &(&1 < 128))

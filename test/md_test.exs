@@ -328,7 +328,7 @@ defmodule MdTest do
                 {:li, nil, ["1 | 1"]},
                 {:ul, nil,
                  [
-                   {:li, nil, ["2 | 1"]},
+                   {:li, nil, ["2 | 1"]}
                  ]},
                 {:li, nil, ["1 | 2"]},
                 {:ul, nil, [{:li, nil, ["2 | 3"]}]},
