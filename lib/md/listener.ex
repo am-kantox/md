@@ -118,3 +118,17 @@ defmodule Md.Listener.Debug do
   @moduledoc false
   use Md.Listener
 end
+
+defmodule Md.Listener.Beautifier do
+  @moduledoc false
+  use Md.Listener
+
+  alias Md.Parser.State
+
+  def handle_tag({:p, false}, %State{ast: [{:p, attrs, [title]}]} = state)
+      when byte_size(title) < 42 do
+    {:update, %State{state | ast: [{:h1, attrs, [title]}]}}
+  end
+
+  def handle_tag(_, _), do: :ok
+end
