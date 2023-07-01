@@ -12,7 +12,7 @@ defmodule Md.Engine.Test do
 
   test "raises when no @syntax defined" do
     assert_raise CompileError,
-                 " `@syntax` must be set or passed to `use Md.Parser` as `syntax:`",
+                 "`@syntax` must be set or passed to `use Md.Parser` as `syntax:`",
                  fn ->
                    Module.create(NoSyntax, quote(do: use(Md.Parser)), Macro.Env.location(__ENV__))
                  end

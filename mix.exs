@@ -56,6 +56,7 @@ defmodule Md.MixProject do
       {:excoveralls, "~> 0.14", only: :test, runtime: false},
       {:dialyxir, "~> 1.0", only: :ci, runtime: false},
       {:ex_doc, ">= 0.0.0", only: :dev},
+      {:mneme, "~> 0.3", only: :test},
       {:benchfella, "~> 0.3", only: :ci},
       {:earmark, "~> 1.4", only: :ci}
     ]

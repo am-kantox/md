@@ -18,6 +18,7 @@ locals_without_parens = [
 
 [
   locals_without_parens: locals_without_parens,
+  import_deps: if(Mix.env() == :test, do: [:mneme], else: []),
   export: [
     locals_without_parens: locals_without_parens
   ],

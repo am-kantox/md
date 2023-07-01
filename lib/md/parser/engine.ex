@@ -1323,16 +1323,16 @@ defmodule Md.Engine do
   end
 
   defmacro macros do
-    quote generated: true, bind_quoted: [], context: __CALLER__.module do
+    quote generated: true, location: :keep, bind_quoted: [], context: __CALLER__.module do
       # helper macros
       defmacrop initial do
-        quote generated: true, context: __CALLER__.module do
+        quote generated: true, location: :keep, context: __CALLER__.module do
           %Md.Parser.State{mode: [:idle], path: [], ast: []} = var!(state, __MODULE__)
         end
       end
 
       defmacrop empty(mode) do
-        quote generated: true, context: __CALLER__.module do
+        quote generated: true, location: :keep, context: __CALLER__.module do
           %Md.Parser.State{
             mode: [unquote(mode) = var!(mode, __MODULE__) | _],
             path: []
@@ -1341,20 +1341,20 @@ defmodule Md.Engine do
       end
 
       defmacrop state do
-        quote generated: true, context: __CALLER__.module do
+        quote generated: true, location: :keep, context: __CALLER__.module do
           %Md.Parser.State{mode: [var!(mode, __MODULE__) | _]} = var!(state, __MODULE__)
         end
       end
 
       defmacrop state(mode) do
-        quote generated: true, context: __CALLER__.module do
+        quote generated: true, location: :keep, context: __CALLER__.module do
           %Md.Parser.State{mode: [unquote(mode) = var!(mode, __MODULE__) | _]} =
             var!(state, __MODULE__)
         end
       end
 
       defmacrop state_linefeed do
-        quote generated: true, context: __CALLER__.module do
+        quote generated: true, location: :keep, context: __CALLER__.module do
           %Md.Parser.State{mode: [{:linefeed, var!(pos, __MODULE__)} | _]} =
             var!(state, __MODULE__)
         end
@@ -1375,11 +1375,23 @@ defmodule Md.Engine do
 
       defp push_char(empty({:linefeed, _}), <<?\s>>), do: state
 
-      defp push_char(empty({:linefeed, _}), x),
-        do: %Md.Parser.State{state | path: [{nest(:outer), nil, [x]}]}
+      defp push_char(empty({:linefeed, _}), x) do
+        state =
+          state
+          |> listener({:tag, nest(:outer), true})
+          |> listener({:char, x})
 
-      defp push_char(empty(_), x),
-        do: %Md.Parser.State{state | path: [{nest(:span), nil, [x]}]}
+        %Md.Parser.State{state | path: [{nest(:outer), nil, [x]}]}
+      end
+
+      defp push_char(empty(_), x) do
+        state =
+          state
+          |> listener({:tag, nest(:span), true})
+          |> listener({:char, x})
+
+        %Md.Parser.State{state | path: [{nest(:span), nil, [x]}]}
+      end
 
       defp push_char(state(), x),
         do: %Md.Parser.State{state | path: do_push_char(x, state.path, mode)}

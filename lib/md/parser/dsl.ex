@@ -5,7 +5,9 @@ defmodule Md.Parser.DSL do
 
   Enum.each(Syntax.types(), fn type ->
     defmacro unquote(type)(opening, attrs) do
-      quote bind_quoted: [type: unquote(type), opening: opening, attrs: attrs] do
+      quote generated: true,
+            location: :keep,
+            bind_quoted: [type: unquote(type), opening: opening, attrs: attrs] do
         @syntax %{type => [{opening, attrs}]}
       end
     end
