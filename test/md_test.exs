@@ -199,6 +199,23 @@ defmodule MdTest do
     """
 
     assert [{:pre, nil, [{:code, nil, ["`inline-code`\n"]}]}] == Md.parse(input).ast
+
+    input = """
+    ```html
+    <div>
+      <p>foo</p>
+    </div>
+    ```
+    """
+
+    assert [
+             {:pre, nil,
+              [
+                {:code, %{class: "html"},
+                 ["&lt;div&gt;\n  &lt;p&gt;foo&lt;/p&gt;\n&lt;/div&gt;\n"]}
+              ]}
+           ] ==
+             Md.parse(input).ast
   end
 
   test "codeblock" do
