@@ -41,6 +41,7 @@ defmodule Md.Listener do
           __struct__: Md.Parser.State,
           path: [trace()],
           mode: [parse_mode()],
+          type: module(),
           ast: [branch()],
           listener: nil | module(),
           payload: any(),
@@ -126,7 +127,7 @@ defmodule Md.Listener.Beautifier do
   alias Md.Parser.State
 
   def handle_tag({:p, false}, %State{ast: [{:p, attrs, [title]}]} = state)
-      when byte_size(title) < 42 do
+      when byte_size(title) < 128 do
     {:update, %State{state | ast: [{:h1, attrs, [title]}]}}
   end
 

@@ -26,8 +26,9 @@ defmodule Md.Parser do
   as a tuple.
   """
   alias Md.Listener, as: L
-  alias Md.Parser.Default, as: DefaultParser
   alias Md.Parser.State
+
+  @default_parser Application.compile_env(:md, :default_parser, Md.Parser.Default)
 
   @typedoc """
   The type to be used in all the intermediate states of parsing.
@@ -65,7 +66,7 @@ defmodule Md.Parser do
   def generate(input, options \\ [])
 
   def generate(input, options) when is_binary(input) and is_list(options) do
-    {parser, options} = Keyword.pop(options, :parser, DefaultParser)
+    {parser, options} = Keyword.pop(options, :parser, @default_parser)
     input |> parser.parse() |> elem(1) |> generate(options)
   end
 

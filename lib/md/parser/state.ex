@@ -3,10 +3,13 @@ defmodule Md.Parser.State do
   The internal state of the parser.
   """
 
+  @default_parser Application.compile_env(:md, :default_parser, Md.Parser.Default)
+
   @type t :: Md.Listener.state()
   defstruct path: [],
             ast: [],
             mode: [:idle],
+            type: @default_parser,
             listener: nil,
             payload: nil,
             bag: %{indent: [], stock: [], deferred: []}

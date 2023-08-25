@@ -94,11 +94,17 @@ defmodule Md.Parser.Syntax.Default do
       ],
       paragraph: [
         {"#", %{tag: :h1}},
+        {"§1", %{tag: :h1}},
         {"##", %{tag: :h2}},
+        {"§2", %{tag: :h2}},
         {"###", %{tag: :h3}},
+        {"§3", %{tag: :h3}},
         {"####", %{tag: :h4}},
+        {"§4", %{tag: :h4}},
         {"#####", %{tag: :h5}},
+        {"§5", %{tag: :h5}},
         {"######", %{tag: :h6}},
+        {"§6", %{tag: :h6}},
         # nested
         {">", %{tag: [:blockquote, :p]}}
       ],
@@ -106,6 +112,7 @@ defmodule Md.Parser.Syntax.Default do
         [
           {"- ", %{tag: :li, outer: :ul}},
           {"* ", %{tag: :li, outer: :ul}},
+          {"• ", %{tag: :li, outer: :ul}},
           {"+ ", %{tag: :li, outer: :ul}}
         ] ++ Enum.map(0..@ol_max, &{"#{&1}. ", %{tag: :li, outer: :ol}}),
       brace: [

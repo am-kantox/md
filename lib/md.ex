@@ -11,7 +11,6 @@ defmodule Md do
 
   @behaviour Md.Parser
 
-  alias Md.Parser.Default, as: Parser
   alias Md.Parser.State, as: State
 
   @doc """
@@ -32,7 +31,7 @@ defmodule Md do
   """
   @impl Md.Parser
   def parse(input, state \\ %State{}),
-    do: with({"", state} <- Parser.parse(input, state), do: state)
+    do: with({"", state} <- state.type.parse(input, state), do: state)
 
   defdelegate generate(input), to: Md.Parser
   defdelegate generate(input, options), to: Md.Parser

@@ -1,3 +1,5 @@
+Benchfella.start()
+
 defmodule Md.Bench do
   use Benchfella
 
