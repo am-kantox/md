@@ -32,7 +32,8 @@ defmodule Md.Parser.Syntax do
           paragraph: [item()],
           list: [item()],
           tag: [item()],
-          brace: [item()]
+          brace: [item()],
+          linewrap: boolean()
         }
 
   @doc "The implementation should return settings for this particular syntax definition"

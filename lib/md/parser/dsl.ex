@@ -12,4 +12,10 @@ defmodule Md.Parser.DSL do
       end
     end
   end)
+
+  defmacro linewrap(value \\ true) do
+    quote do
+      @syntax %{linewrap: unquote(value)}
+    end
+  end
 end

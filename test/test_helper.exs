@@ -18,8 +18,9 @@ defmodule MyDSLParser do
   use Md.Parser, syntax: @my_syntax
   import Md.Parser.DSL
 
-  comment("<!--", %{closing: "-->"})
-  magnet("%", %{transform: Tag, terminators: [:ascii_punctuation]})
+  comment "<!--", %{closing: "-->"}
+  magnet "%", %{transform: Tag, terminators: [:ascii_punctuation]}
+  linewrap true
 end
 
 ExUnit.start()

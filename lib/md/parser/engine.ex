@@ -663,9 +663,18 @@ defmodule Md.Engine do
             end
 
           state =
-            state
-            |> listener(:linefeed)
-            |> push_char(unquote(lb))
+            case syntax()[:linewrap] do
+              true ->
+                state
+                |> push_path({:br, [], []})
+                |> listener({:tag, {"  ", :br}, nil})
+                |> rewind_state(until: :br, inclusive: true)
+
+              _ ->
+                state
+                |> listener(:linefeed)
+                |> push_char(unquote(lb))
+            end
             |> push_mode({:linefeed, 0})
 
           do_parse(rest, state)

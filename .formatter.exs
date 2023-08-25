@@ -13,7 +13,8 @@ locals_without_parens = [
   disclosure: 2,
   paragraph: 2,
   list: 2,
-  brace: 2
+  brace: 2,
+  linewrap: 1
 ]
 
 [
