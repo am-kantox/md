@@ -13,9 +13,18 @@ defmodule Md.Parser.DSL do
     end
   end)
 
-  defmacro linewrap(value \\ true) do
-    quote do
-      @syntax %{linewrap: unquote(value)}
+  Enum.each(Syntax.settings(), fn type ->
+    defmacro unquote(type)(setting) do
+      quote bind_quoted: [type: unquote(type), setting: setting] do
+        @syntax %{
+          settings:
+            Map.put(
+              Enum.find(@syntax, Md.Parser.Syntax.Void.settings(), &match?(%{settings: _}, &1)),
+              type,
+              setting
+            )
+        }
+      end
     end
-  end
+  end)
 end

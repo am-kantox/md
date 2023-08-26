@@ -37,6 +37,7 @@ defmodule Md.Engine do
 
       @empty_tags get_in(syntax, [:settings, :empty_tags]) || []
       @requiring_attributes_tags get_in(syntax, [:settings, :requiring_attributes_tags]) || []
+      @linewrap get_in(syntax, [:settings, :linewrap]) || false
 
       Md.Engine.macros()
       Md.Engine.init()
@@ -663,7 +664,7 @@ defmodule Md.Engine do
             end
 
           state =
-            case syntax()[:linewrap] do
+            case @linewrap do
               true ->
                 state
                 |> push_path({:br, [], []})

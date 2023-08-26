@@ -131,8 +131,7 @@ defmodule Md.Parser.Syntax.Default do
         {"dl", %{}},
         {"dt", %{}},
         {"dd", %{}}
-      ],
-      linewrap: false
+      ]
     }
   end
 end

@@ -10,7 +10,8 @@ defmodule Md.Parser.Syntax do
           optional(:linebreaks) => [binary()],
           optional(:disclosure_range) => Range.t(),
           optional(:empty_tags) => [atom()],
-          optional(:requiring_attributes_tags) => [atom()]
+          optional(:requiring_attributes_tags) => [atom()],
+          optional(:linewrap) => boolean()
         }
 
   @typedoc "Syntax item definition"
@@ -32,8 +33,7 @@ defmodule Md.Parser.Syntax do
           paragraph: [item()],
           list: [item()],
           tag: [item()],
-          brace: [item()],
-          linewrap: boolean()
+          brace: [item()]
         }
 
   @doc "The implementation should return settings for this particular syntax definition"
@@ -42,7 +42,7 @@ defmodule Md.Parser.Syntax do
   @doc "The implementation should return a syntax definition"
   @callback syntax :: t()
 
-  @doc "List of different types of markup"
+  @doc false
   @spec types :: [
           :custom
           | :substitute
@@ -77,6 +77,29 @@ defmodule Md.Parser.Syntax do
       :list,
       :tag,
       :brace
+    ]
+  end
+
+  @doc false
+  @spec settings :: [
+          :outer
+          | :span
+          | :linebreaks
+          | :disclosure_range
+          | :empty_tags
+          | :requiring_attributes_tags
+          | :linewrap
+        ]
+
+  def settings do
+    [
+      :outer,
+      :span,
+      :linebreaks,
+      :disclosure_range,
+      :empty_tags,
+      :requiring_attributes_tags,
+      :linewrap
     ]
   end
 
