@@ -13,6 +13,9 @@ defmodule MyDSLParser do
     end
   end
 
+  # @my_syntax Md.Parser.Syntax.merge(Md.Parser.Syntax.Default.syntax(), %{
+  #              brace: [{"***", %{tag: "u"}}]
+  #            })
   @my_syntax %{brace: [{"***", %{tag: "u"}}]}
 
   use Md.Parser, syntax: @my_syntax
