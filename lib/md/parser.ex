@@ -76,6 +76,7 @@ defmodule Md.Parser do
     {ast, acc} =
       case walker do
         nil -> {ast, nil}
+        fun when is_function(fun, 1) -> {XmlBuilder.prewalk(ast, fun), nil}
         fun when is_function(fun, 2) -> XmlBuilder.prewalk(ast, %{}, fun)
         {:pre, fun} when is_function(fun, 1) -> {XmlBuilder.prewalk(ast, fun), nil}
         {:post, fun} when is_function(fun, 1) -> {XmlBuilder.postwalk(ast, fun), nil}

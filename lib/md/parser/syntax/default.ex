@@ -47,7 +47,7 @@ defmodule Md.Parser.Syntax.Default do
         {"http://", %{transform: Anchor, terminators: [], greedy: :left}}
       ],
       block: [
-        {"```", %{tag: [:pre, :code], pop: %{code: :class}}}
+        {"```", %{tag: [:pre, :code], pop: %{code: [attribute: :class, prefixes: ["", "lang-"]]}}}
       ],
       shift: [
         {"    ", %{tag: [:div, :code], attributes: %{class: "pre"}}}

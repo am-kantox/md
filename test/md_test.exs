@@ -170,7 +170,8 @@ defmodule MdTest do
              {:p, nil, ["foo"]},
              {:pre, nil,
               [
-                {:code, %{class: "elixir"}, ["def foo, do: :ok\n\ndef bar, do: :error\n"]}
+                {:code, %{class: "elixir lang-elixir"},
+                 ["def foo, do: :ok\n\ndef bar, do: :error\n"]}
               ]}
            ] ==
              Md.parse(input).ast
@@ -405,7 +406,7 @@ defmodule MdTest do
 
     assert [
              {:blockquote, nil,
-              [{:p, nil, ["line 1", "\n", {:i, %{class: :"empty-tag"}, []}, "line 2"]}]}
+              [{:p, nil, ["line 1", "\n", {:i, %{class: "empty-tag"}, []}, "line 2"]}]}
            ] ==
              Md.parse(">line 1\n>_\n>line 2").ast
 
@@ -413,7 +414,7 @@ defmodule MdTest do
              {:blockquote, nil,
               [
                 {:p, nil,
-                 ["line 1", "\n", {:em, nil, [{:i, %{class: :"empty-tag"}, []}]}, "line 2"]}
+                 ["line 1", "\n", {:em, nil, [{:i, %{class: "empty-tag"}, []}]}, "line 2"]}
               ]}
            ] ==
              Md.parse(">line 1\n>___\n>line 2").ast
@@ -425,8 +426,8 @@ defmodule MdTest do
                  [
                    "line 1",
                    "\n",
-                   {:em, %{class: :"empty-tag"}, []},
-                   {:em, nil, [{:i, %{class: :"empty-tag"}, []}]},
+                   {:em, %{class: "empty-tag"}, []},
+                   {:em, nil, [{:i, %{class: "empty-tag"}, []}]},
                    "line 2"
                  ]}
               ]}
@@ -691,7 +692,10 @@ defmodule MdTest do
                 ]},
                {:p, nil, ["Hi ", {:a, %{href: "https://anchor.com"}, ["anchor"]}, " 1!"]},
                {:pre, nil,
-                [{:code, %{class: "elixir"}, ["def foo, do: :ok\n\ndef bar, do: :error\n"]}]},
+                [
+                  {:code, %{class: "elixir lang-elixir"},
+                   ["def foo, do: :ok\n\ndef bar, do: :error\n"]}
+                ]},
                {:ul, nil,
                 [
                   {:li, nil,

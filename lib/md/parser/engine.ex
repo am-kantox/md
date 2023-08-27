@@ -1610,8 +1610,17 @@ defmodule Md.Engine do
 
       defp update_attrs({tag, attrs, [value | rest]} = full_tag, pop) do
         case pop do
-          %{^tag => attr} -> {tag, Map.put(attrs || %{}, attr, value), rest}
-          _ -> full_tag
+          %{^tag => attr} when is_atom(attr) ->
+            {tag, Map.put(attrs || %{}, attr, value), rest}
+
+          %{^tag => attr} when is_list(attr) ->
+            attr_value =
+              attr |> Keyword.get(:prefixes, [""]) |> Enum.map_join(" ", &(&1 <> value))
+
+            {tag, Map.put(attrs || %{}, attr[:attribute], attr_value), rest}
+
+          _ ->
+            full_tag
         end
       end
 
@@ -1672,7 +1681,7 @@ defmodule Md.Engine do
         do: {nest(:span), %{class: "empty-anchor"}, content}
 
       defp maybe_hide({tag, attrs, []}),
-        do: {tag, Map.put(attrs || %{}, :class, :"empty-tag"), []}
+        do: {tag, Map.put(attrs || %{}, :class, "empty-tag"), []}
 
       defp maybe_hide({_tag, _attrs, _branch} = trace), do: trace
 
