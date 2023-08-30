@@ -141,6 +141,7 @@ Instead of `@syntax` module attribute, one might use
 
 ## Changelog
 
+- **`0.9.10`** [:ant:] escape in blocks (credits @adriansalamon,) sup, sub, center, youtube
 - **`0.9.9`** [:ant:] fixed nested mixed lists
 - **`0.9.7`** [:ant:] fixed custom parsers invocation
 - **`0.9.4`** adds `class: "empty-anchor"` to tags expecting attributes to be set, fixed :ant: with nested brackets
