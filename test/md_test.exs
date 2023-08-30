@@ -212,7 +212,7 @@ defmodule MdTest do
     assert [
              {:pre, nil,
               [
-                {:code, %{class: "html"},
+                {:code, %{class: "html lang-html"},
                  ["&lt;div&gt;\n  &lt;p&gt;foo&lt;/p&gt;\n&lt;/div&gt;\n"]}
               ]}
            ] ==
