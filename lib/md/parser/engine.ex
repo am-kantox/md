@@ -517,9 +517,20 @@ defmodule Md.Engine do
                <<x::utf8, rest::binary>>,
                %Md.Parser.State{path: [unquote_splicing(closing_match) | _]} = state
              ) do
-          do_parse(rest, push_char(state, x))
+          do_parse(rest, push_char(state, escape_char(x)))
         end
       end)
+
+      defp escape_char(x) do
+        case x do
+          ?' -> "&#39;"
+          ?" -> "&quot;"
+          ?& -> "&amp;"
+          ?< -> "&lt;"
+          ?> -> "&gt;"
+          _ -> x
+        end
+      end
     end
   end
 
