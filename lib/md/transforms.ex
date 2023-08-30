@@ -167,3 +167,38 @@ defmodule Md.Transforms.TwitterHandle do
     {:a, %{href: @href <> URI.encode_www_form(text)}, [md <> text]}
   end
 end
+
+defmodule Md.Transforms.Youtube do
+  _ = """
+  <iframe width="560"
+          height="315"
+          src="https://www.youtube.com/embed/4_EfniTmakQ?si=Ikofm1EvNCldhP9b"
+          title="YouTube video player"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen>
+  </iframe>
+  """
+
+  @moduledoc false
+  @behaviour Md.Transforms
+
+  @href "https://www.youtube.com/embed/"
+
+  @impl Md.Transforms
+  def apply(_md, text) do
+    src = text |> String.split("/") |> List.last()
+
+    {:iframe,
+     %{
+       width: "560",
+       height: "315",
+       src: @href <> src,
+       title: "YouTube video player",
+       frameborder: "0",
+       allow:
+         "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share",
+       allowfullscreen: true
+     }, []}
+  end
+end

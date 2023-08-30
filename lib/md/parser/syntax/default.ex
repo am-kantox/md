@@ -2,7 +2,7 @@ defmodule Md.Parser.Syntax.Default do
   @moduledoc false
 
   alias Md.Parser.{Syntax, Syntax.Void}
-  alias Md.Transforms.{Anchor, Footnote, TwitterHandle}
+  alias Md.Transforms.{Anchor, Footnote, TwitterHandle, Youtube}
 
   @behaviour Syntax
 
@@ -44,7 +44,8 @@ defmodule Md.Parser.Syntax.Default do
         {"[^", %{transform: Footnote, terminators: [?\]], greedy: true}},
         {"@", %{transform: &TwitterHandle.apply/2, terminators: [?,, ?., ?!, ??, ?:, ?;]}},
         {"https://", %{transform: Anchor, terminators: [], greedy: :left}},
-        {"http://", %{transform: Anchor, terminators: [], greedy: :left}}
+        {"http://", %{transform: Anchor, terminators: [], greedy: :left}},
+        {"✇", %{transform: &Youtube.apply/2, terminators: [], greedy: :left}}
       ],
       block: [
         {"```", %{tag: [:pre, :code], pop: %{code: [attribute: :class, prefixes: ["", "lang-"]]}}}
@@ -122,12 +123,17 @@ defmodule Md.Parser.Syntax.Default do
         {"__", %{tag: :em}},
         {"~", %{tag: :s}},
         {"~~", %{tag: :del}},
+        {"⇓", %{tag: :sub}},
+        {"⇑", %{tag: :sup}},
+        {"⇒", %{tag: :center, closing: "⇐"}},
         {"``", %{tag: :span, mode: :raw, attributes: %{class: "code-inline"}}},
         {"`", %{tag: :code, mode: :raw, attributes: %{class: "code-inline"}}},
         {"[^", %{closing: "]", tag: :b, mode: :raw}}
       ],
       tag: [
         {"sup", %{}},
+        {"sub", %{}},
+        {"kbd", %{}},
         {"dl", %{}},
         {"dt", %{}},
         {"dd", %{}}
