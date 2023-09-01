@@ -758,7 +758,7 @@ defmodule Md.Engine do
 
           do_parse(rest, %Md.Parser.State{
             state
-            | bag: %{state.bag | stock: Enum.reverse(content)},
+            | bag: %{state.bag | stock: content},
               path: [{unquote(tag), attrs, []} | path_tail]
           })
         end
@@ -809,7 +809,7 @@ defmodule Md.Engine do
                   attrs
                   |> Kernel.||(%{})
                   |> Map.put(attr_content, content)
-                  |> Map.put(attr_outer_content, to_s(outer_content))
+                  |> Map.put(attr_outer_content, outer_content |> Enum.reverse() |> to_s())
 
                 {unquote(tag), attrs, []}
 
@@ -820,14 +820,14 @@ defmodule Md.Engine do
                 {unquote(tag), attrs,
                  [
                    {unquote(inner_tag), %{attr => content}, []},
-                   {tag, nil, outer_content}
+                   {tag, nil, Enum.reverse(outer_content)}
                  ]}
 
               {:tag, tag} ->
                 {unquote(tag), attrs,
                  [
                    {unquote(inner_tag), nil, [content]},
-                   {tag, nil, outer_content}
+                   {tag, nil, Enum.reverse(outer_content)}
                  ]}
             end
 
