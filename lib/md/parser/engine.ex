@@ -68,6 +68,7 @@ defmodule Md.Engine do
       Md.Engine.paragraph(@final_syntax[:paragraph])
       Md.Engine.list(@final_syntax[:list])
       Md.Engine.brace(@final_syntax[:brace])
+      Md.Engine.attributes(@final_syntax[:attributes])
       Md.Engine.plain()
       Md.Engine.terminate()
       Md.Engine.helpers()
@@ -1281,6 +1282,67 @@ defmodule Md.Engine do
             |> listener({:tag, {unquote(md), unquote(tag)}, true})
             |> push_mode(unquote(mode))
             |> push_path(for tag <- tags, do: {tag, unquote(attrs), []})
+
+          do_parse(rest, state)
+        end
+      end)
+    end
+  end
+
+  defmacro attributes(attributes) do
+    quote generated: true,
+          location: :keep,
+          bind_quoted: [attributes: attributes],
+          context: __CALLER__.module do
+      Enum.each(attributes, fn {md, properties} ->
+        mode = :raw
+        closing = Map.get(properties, :closing, md)
+
+        defp do_parse(
+               <<unquote(closing), rest::binary>>,
+               %Md.Parser.State{mode: [mode | _], path: [h | t]} = state
+             )
+             when mode == unquote(mode) do
+          state =
+            case h do
+              {tag, attrs, grabbed} ->
+                [grabbed | collected] = grabbed
+
+                set =
+                  grabbed
+                  |> String.split(~r/[,|]\s*/)
+                  |> Enum.map(&String.split(&1, ~r/[:=]\s*/))
+                  |> Enum.map(fn
+                    [k] -> {String.to_atom(k), true}
+                    [k, v] -> {String.to_atom(k), v |> String.trim("'") |> String.trim("\"")}
+                  end)
+                  |> Map.new()
+
+                %Md.Parser.State{
+                  state
+                  | path: [{tag, Map.merge(attrs || %{}, set), collected} | t]
+                }
+
+              _ ->
+                state
+            end
+            |> pop_mode([:raw])
+
+          do_parse(rest, state)
+        end
+
+        defp do_parse(
+               <<unquote(md), rest::binary>>,
+               %Md.Parser.State{mode: [mode | _], path: [{tag, attrs, content} | t]} = state
+             )
+             when mode not in [:raw, {:inner, :raw}] do
+          state =
+            %Md.Parser.State{
+              state
+              | path: [{tag, attrs || %{}, ["" | content || []]} | t]
+            }
+            # |> listener({:attribute, {unquote(md), unquote(tag)}, true})
+            |> push_mode(unquote(mode))
 
           do_parse(rest, state)
         end
