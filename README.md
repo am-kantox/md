@@ -30,6 +30,7 @@ But if one wants to easily extend syntax almost without limits, `Md` might be go
 There are several different syntax patterns recognizable by `Md`. Those are:
 
 - `custom` — the custom parser implementing `Md.Parser` behavious would be called
+- `attributes` — inplace attributes for all tags `"{{foo:'bar'}}"` → `"<… foo='bar' …>"`
 - `substitute` — simple substitution, like `"<"` → `"&lt;"`
 - `escape` — characters to be treated as is, not as a part of syntax
 - `comment` — characters to be treated as a comment, discarded in the output
@@ -141,6 +142,7 @@ Instead of `@syntax` module attribute, one might use
 
 ## Changelog
 
+- **`0.10.0`** [:tag:] attributes for tags
 - **`0.9.10`** [:ant:] escape in blocks (credits @adriansalamon,) sup, sub, center, youtube
 - **`0.9.9`** [:ant:] fixed nested mixed lists
 - **`0.9.7`** [:ant:] fixed custom parsers invocation

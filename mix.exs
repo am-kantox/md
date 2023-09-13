@@ -2,13 +2,13 @@ defmodule Md.MixProject do
   use Mix.Project
 
   @app :md
-  @version "0.9.10"
+  @version "0.10.0"
 
   def project do
     [
       app: @app,
       version: @version,
-      elixir: "~> 1.11",
+      elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
       package: package(),
