@@ -19,6 +19,9 @@ defmodule Md.Parser.Syntax.Default do
       custom: [
         # {md, {handler, properties}}
       ],
+      attributes: [
+        {"{{", %{closing: "}}"}}
+      ],
       substitute: [
         {"<", %{text: "&lt;"}},
         {"&", %{text: "&amp;"}}

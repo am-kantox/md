@@ -560,6 +560,18 @@ defmodule MdTest do
              Md.parse("\\[[TEST](https://foo.com)]").ast
   end
 
+  test "attributes" do
+    assert %Md.Parser.State{
+             mode: [:finished],
+             ast: [
+               {:p, nil, ["he", {:b, %{color: "red"}, ["llo"]}, " ", {:i, nil, ["kit"]}, "ty"]}
+             ]
+           } = Md.parse("   he*l{{color: 'red'}}lo* _kit_ty")
+
+    assert [{:a, %{href: "https://foo.com", rel: "me"}, ["foo ", {:i, nil, ["bar"]}, " baz"]}] ==
+             Md.parse("[foo _bar_ baz{{rel:me}}](https://foo.com)").ast
+  end
+
   test "pairs (img)" do
     input = """
     Hi,

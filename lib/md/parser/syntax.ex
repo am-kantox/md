@@ -20,6 +20,7 @@ defmodule Md.Parser.Syntax do
   @typedoc "Syntax definition"
   @type t :: %{
           custom: [item()],
+          attributes: [item()],
           substitute: [item()],
           escape: [item()],
           comment: [item()],
@@ -45,6 +46,7 @@ defmodule Md.Parser.Syntax do
   @doc false
   @spec types :: [
           :custom
+          | :attributes
           | :substitute
           | :escape
           | :comment
@@ -63,6 +65,7 @@ defmodule Md.Parser.Syntax do
   def types do
     [
       :custom,
+      :attributes,
       :substitute,
       :escape,
       :comment,
