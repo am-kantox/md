@@ -11,8 +11,15 @@ defmodule Md.Engine.Test do
   end
 
   test "raises when no @syntax defined" do
+    message =
+      if Version.match?(System.version(), ">= 1.12.0") do
+        "`@syntax` must be set or passed to `use Md.Parser` as `syntax:`"
+      else
+        " `@syntax` must be set or passed to `use Md.Parser` as `syntax:`"
+      end
+
     assert_raise CompileError,
-                 "`@syntax` must be set or passed to `use Md.Parser` as `syntax:`",
+                 message,
                  fn ->
                    Module.create(NoSyntax, quote(do: use(Md.Parser)), Macro.Env.location(__ENV__))
                  end
