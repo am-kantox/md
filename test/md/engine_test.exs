@@ -12,7 +12,7 @@ defmodule Md.Engine.Test do
 
   test "raises when no @syntax defined" do
     message =
-      if Version.match?(System.version(), ">= 1.12.0") do
+      if Version.match?(System.version(), ">= 1.13.0") do
         "`@syntax` must be set or passed to `use Md.Parser` as `syntax:`"
       else
         " `@syntax` must be set or passed to `use Md.Parser` as `syntax:`"
