@@ -674,6 +674,45 @@ defmodule MdTest do
            ] == Md.parse(input).ast
   end
 
+  test "tables with captions" do
+    input = """
+    Hi,
+
+    | # Caption |
+    |--------------|:-----:|-----------:|
+    | Item         | Price | # In stock |
+    |--------------|:-----:|-----------:|
+    | Juicy Apples |  1.99 |        739 |
+    | **Bananas**  |  1.89 |          6 |
+    """
+
+    assert [
+             {:p, nil, ["Hi,"]},
+             {:table, nil,
+              [
+                {:caption, nil, [" Caption "]},
+                {:tr, nil,
+                 [
+                   {:th, nil, [" Item         "]},
+                   {:th, nil, [" Price "]},
+                   {:th, nil, [" # In stock "]}
+                 ]},
+                {:tr, nil,
+                 [
+                   {:td, nil, [" Juicy Apples "]},
+                   {:td, nil, ["  1.99 "]},
+                   {:td, nil, ["        739 "]}
+                 ]},
+                {:tr, nil,
+                 [
+                   {:td, nil, [{:strong, %{class: "red"}, ["Bananas"]}, "  "]},
+                   {:td, nil, ["  1.89 "]},
+                   {:td, nil, ["          6 "]}
+                 ]}
+              ]}
+           ] == Md.parse(input).ast
+  end
+
   test "simple markdown" do
     assert "priv/SIMPLE.md" |> File.read!() |> Md.parse() == %Md.Parser.State{
              mode: [:finished],
