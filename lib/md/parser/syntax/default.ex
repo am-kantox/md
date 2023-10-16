@@ -33,7 +33,15 @@ defmodule Md.Parser.Syntax.Default do
         {"<!--", %{closing: "-->"}}
       ],
       matrix: [
-        {"|", %{tag: :td, outer: :table, inner: :tr, first_inner_tag: :th, skip: "|-"}}
+        {"|",
+         %{
+           tag: :td,
+           outer: :table,
+           inner: :tr,
+           first_inner_tag: :th,
+           skip: "|-",
+           extras: %{"#" => :caption}
+         }}
       ],
       flush: [
         {"---", %{tag: :hr, rewind: :flip_flop}},

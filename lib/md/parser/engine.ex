@@ -170,18 +170,51 @@ defmodule Md.Engine do
           context: __CALLER__.module do
       Enum.each(matrices, fn {md, properties} ->
         skip = Map.get(properties, :skip)
-        outer = Map.get(properties, :outer, md)
+        extras = Map.get(properties, :extras, %{})
+        sub_tags = Map.values(extras)
+        outer = Map.get(properties, :outer, :div)
         inner = Map.get(properties, :inner, outer)
         [tag | _] = tags = properties |> Map.get(:tag, :div) |> List.wrap()
         first_inner_tag = Map.get(properties, :first_inner_tag, tag)
         attrs = Macro.escape(properties[:attributes])
 
         if not is_nil(skip) do
-          defp do_parse(<<unquote(skip), rest::binary>>, state_linefeed()) do
+          defp do_parse(
+                 <<unquote(skip), rest::binary>>,
+                 %Md.Parser.State{
+                   mode: [{:linefeed, pos} | _],
+                   path: [{_, _, _} | _]
+                 } = state
+               ) do
             state =
               state
               |> pop_mode([{:linefeed, pos}, :md])
               |> push_mode(:skip)
+
+            do_parse(rest, state)
+          end
+        end
+
+        # extras subparsing
+        for {sub_md, sub_tag} <- extras do
+          defp do_parse(
+                 <<unquote(sub_md), rest::binary>>,
+                 %Md.Parser.State{
+                   mode: [:md | _],
+                   path: [
+                     {tag, _, _},
+                     {unquote(inner), _, []},
+                     {unquote(outer), _, _} = t_outer | path
+                   ]
+                 } = state
+               )
+               when tag in [unquote(tag), unquote(first_inner_tag)] do
+            state =
+              %Md.Parser.State{
+                state
+                | path: [{unquote(sub_tag), nil, []}, t_outer | path]
+              }
+              |> listener({:tag, {unquote(sub_md), unquote(sub_tag)}, true})
 
             do_parse(rest, state)
           end
@@ -194,13 +227,38 @@ defmodule Md.Engine do
                  path: [{tag, _, _} | _]
                } = state
              )
-             when tag in [unquote(first_inner_tag), unquote_splicing(tags)] do
+             when tag in [
+                    unquote(first_inner_tag),
+                    unquote_splicing(tags)
+                  ] do
           state =
             state
             |> pop_mode([{:linefeed, pos}, :md])
+            |> listener({:tag, tag, false})
+            |> listener({:tag, unquote(inner), false})
             |> rewind_state(until: unquote(inner), inclusive: true, trim: true)
             |> push_path({unquote(inner), nil, []})
             |> push_path({unquote(tag), nil, []})
+            |> push_mode(:md)
+
+          do_parse(rest, state)
+        end
+
+        defp do_parse(
+               <<unquote(md), rest::binary>>,
+               %Md.Parser.State{
+                 mode: [{:linefeed, pos} | _],
+                 path: [{tag, _, _} | _]
+               } = state
+             )
+             when tag in unquote(sub_tags) do
+          state =
+            state
+            |> pop_mode([{:linefeed, pos}, :md])
+            |> listener({:tag, tag, false})
+            |> rewind_state(until: tag, inclusive: true, trim: true)
+            |> push_path({unquote(inner), nil, []})
+            |> push_path({unquote(first_inner_tag), nil, []})
             |> push_mode(:md)
 
           do_parse(rest, state)
@@ -219,6 +277,15 @@ defmodule Md.Engine do
           do_parse(rest, state)
         end
 
+        defp do_parse(
+               <<unquote(md), rest::binary>>,
+               %Md.Parser.State{path: [{tag, _, _} | _]} = state
+             )
+             when tag in unquote(sub_tags) do
+          do_parse(rest, state)
+        end
+
+        # [AM] TODO: distinguish first and the rest inners
         defp do_parse(<<unquote(md), rest::binary>>, state_linefeed()) do
           state =
             state
