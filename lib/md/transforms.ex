@@ -30,6 +30,7 @@ defmodule Md.Transforms.Anchor do
         ast =
           with {:ok, {{_proto, 200, _ok}, _headers, html}} <-
                  :httpc.request(:get, {url, []}, @httpc_options, []),
+               html = to_string(html),
                {:ok, document} <- Floki.parse_document(html),
                title <- Floki.find(document, "title"),
                metas <- Floki.find(document, "meta") do
