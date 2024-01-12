@@ -32,5 +32,6 @@ bench/snapshots/
 .dialyzer/plts/*plt*
 
 /.elixir_ls/
-
 /.elixir-tools/
+
+/.tool-versions
