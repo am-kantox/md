@@ -142,6 +142,7 @@ Instead of `@syntax` module attribute, one might use
 
 ## Changelog
 
+- **`0.10.2`** spaces as delimiters in attributes
 - **`0.10.1`** support for the flaky `floki` update
 - **`0.10.0`** [:tag:] attributes for tags
 - **`0.9.10`** [:ant:] escape in blocks (credits @adriansalamon,) sup, sub, center, youtube
