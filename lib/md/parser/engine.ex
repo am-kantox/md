@@ -1235,6 +1235,11 @@ defmodule Md.Engine do
                   |> rewind_state(until: unquote(tag), inclusive: true)
                   |> listener({:tag, {unquote(md), unquote(outer)}, true})
                   |> listener({:tag, {unquote(md), unquote(tag)}, true})
+                  |> then(fn this ->
+                    if indents == [],
+                      do: push_mode(this, {:inner, {unquote(tag), unquote(outer)}, pos}),
+                      else: this
+                  end)
                   |> push_path(
                     for tag <- [unquote(outer) | unquote(tags)], do: {tag, unquote(attrs), []}
                   )

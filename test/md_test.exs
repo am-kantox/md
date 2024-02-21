@@ -240,6 +240,14 @@ defmodule MdTest do
            ] == Md.parse(input).ast
   end
 
+  test "paragraph followed by a list" do
+    assert [{:p, nil, ["text"]}, {:ol, nil, [{:li, nil, ["element"]}]}] =
+             Md.parse("text\n\n1. element").ast
+
+    assert [{:p, nil, ["text"]}, {:ol, nil, [{:li, nil, ["element"]}]}] =
+             Md.parse("text\n1. element").ast
+  end
+
   test "nested list starting with a deep nest" do
     input = "test\n    - A\n  - B\n  - C\n"
 
@@ -570,6 +578,10 @@ defmodule MdTest do
 
     assert [{:a, %{href: "https://foo.com", rel: "me"}, ["foo ", {:i, nil, ["bar"]}, " baz"]}] ==
              Md.parse("[foo _bar_ baz{{rel:me}}](https://foo.com)").ast
+
+    # [AM]
+    assert [{:p, nil, ["Normal text is a speaker Note {: class=\"p\" data-x=y}"]}] =
+             Md.parse(~s|Normal text is a speaker Note {: class="p" data-x=y}|).ast
   end
 
   test "pairs (img)" do
