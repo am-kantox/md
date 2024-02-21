@@ -4,7 +4,7 @@
 
 ---
 
-## Main Focus
+### Main Focus
 
 This library is not yet another markdown parser, rather it’s a highly configurable
 and extendable parser for any custom markdown-like markup. It has been created
@@ -25,7 +25,7 @@ parse the common markdown, `Md` is probably not the correct choice.
 
 But if one wants to easily extend syntax almost without limits, `Md` might be good.
 
-## Markup Handling
+### Markup Handling
 
 There are several different syntax patterns recognizable by `Md`. Those are:
 
@@ -45,11 +45,11 @@ There are several different syntax patterns recognizable by `Md`. Those are:
 - `disclosure` — the disclosure of elements previously declared as `pair` with
   `deferred` parameter provided
 - `paragraph` — a header, blockquote, or such, followed by a paragraph flow break
-- `list` — a list, like `- one\n-two`
+- `list` — a list, like `- one\n- two`
 - `tag` — allowed tags (e. g. `<sup>2</sup>`)
 - `brace` — a most common markdown feature, like text decoration or such (e. g. `**bold**`)
 
-## Syntax description
+### Syntax description
 
 The syntax must be configured at compile time (because `parse/2` handlers are
 generated in compile time.) It is a map, having `settings` key
@@ -80,7 +80,7 @@ and its handling rules. Here is the excerpt from the default parser for `brace`s
 For more examples of what properties are allowed for each kind of handlers,
 see the sources (ATM.)
 
-## Predefined parsers
+### Predefined parsers
 
 `Md` comes with a generic predefined parser `Md.Parser.Default`, which includes
 all the markup currently supported by `Md`.
@@ -140,7 +140,7 @@ Instead of `@syntax` module attribute, one might use
 
 ---
 
-## Changelog
+### Changelog
 
 - **`0.10.2`** spaces as delimiters in attributes
 - **`0.10.1`** support for the flaky `floki` update
@@ -168,7 +168,7 @@ Instead of `@syntax` module attribute, one might use
 - **`0.2.1`** deferred references like in `[link][1]` followed by `[1]: https://example.com` somewhere
 - **`0.2.0`** PoC, most of reasonable markdown is supported
 
-## Installation
+### Installation
 
 ```elixir
 def deps do
@@ -178,4 +178,4 @@ def deps do
 end
 ```
 
-## [Documentation](https://hexdocs.pm/md)
+### [Documentation](https://hexdocs.pm/md)

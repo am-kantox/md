@@ -54,6 +54,7 @@ defmodule Md.Listener do
 
   @callback element(context(), state()) :: :ok | {:update, state()}
 
+  @doc false
   defmacro __using__(opts \\ []) do
     emoji = Keyword.get(opts, :emoji, "📑")
 

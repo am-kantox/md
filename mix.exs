@@ -55,7 +55,7 @@ defmodule Md.MixProject do
       {:credo, "~> 1.0", only: :ci, runtime: false},
       {:excoveralls, "~> 0.14", only: :test, runtime: false},
       {:dialyxir, "~> 1.0", only: :ci, runtime: false},
-      {:ex_doc, ">= 0.0.0", only: :dev},
+      {:ex_doc, ">= 0.0.0", only: [:ci, :dev]},
       {:mneme, "~> 0.3", only: :test},
       {:benchfella, "~> 0.3", only: :ci},
       {:earmark, "~> 1.4", only: :ci}
@@ -83,7 +83,7 @@ defmodule Md.MixProject do
   defp package do
     [
       name: @app,
-      files: ~w|lib mix.exs README.md|,
+      files: ~w|lib stuff/logo-48x48.png mix.exs README.md|,
       maintainers: ["Aleksei Matiushkin"],
       licenses: ["MIT"],
       links: %{
@@ -100,7 +100,7 @@ defmodule Md.MixProject do
       canonical: "http://hexdocs.pm/#{@app}",
       logo: "stuff/logo-48x48.png",
       source_url: "https://github.com/am-kantox/#{@app}",
-      extras: [],
+      extras: ~w[README.md],
       groups_for_modules: [
         # Md,
         # Md.Listener,
