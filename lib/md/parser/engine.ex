@@ -1382,7 +1382,7 @@ defmodule Md.Engine do
 
                 set =
                   grabbed
-                  |> String.split(~r/[,|]\s*/)
+                  |> String.split(~r/[,|]\s*|(?<=\w|"|')\s+(?=\w|"|')/)
                   |> Enum.map(&String.split(&1, ~r/[:=]\s*/))
                   |> Enum.map(fn
                     [k] -> {String.to_atom(k), true}

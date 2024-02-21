@@ -579,9 +579,8 @@ defmodule MdTest do
     assert [{:a, %{href: "https://foo.com", rel: "me"}, ["foo ", {:i, nil, ["bar"]}, " baz"]}] ==
              Md.parse("[foo _bar_ baz{{rel:me}}](https://foo.com)").ast
 
-    # [AM]
-    assert [{:p, nil, ["Normal text is a speaker Note {: class=\"p\" data-x=y}"]}] =
-             Md.parse(~s|Normal text is a speaker Note {: class="p" data-x=y}|).ast
+    assert [{:p, %{class: "p", "data-x": "y"}, ["Normal text is a speaker Note "]}] ==
+             Md.parse(~s|Normal text is a speaker Note {{class="p" data-x=y}}|).ast
   end
 
   test "pairs (img)" do
