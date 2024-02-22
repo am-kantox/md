@@ -1,11 +1,12 @@
 defmodule Md.Transforms do
-  @moduledoc false
+  @moduledoc "Custom transforms behaviour to be implemented by custom handlers"
   alias Md.Listener, as: L
+  @doc "Receives the markdown tag and the rest and applies the desired transformation"
   @callback apply(binary(), binary()) :: L.branch()
 end
 
 defmodule Md.Transforms.Anchor do
-  @moduledoc false
+  @moduledoc "Anchor transformation to image or twitter card"
   @behaviour Md.Transforms
 
   @impl Md.Transforms
@@ -144,7 +145,7 @@ defmodule Md.Transforms.Anchor do
 end
 
 defmodule Md.Transforms.Footnote do
-  @moduledoc false
+  @moduledoc "Internal transformation to format footnotes"
   @behaviour Md.Transforms
 
   @impl Md.Transforms
@@ -158,7 +159,7 @@ defmodule Md.Transforms.Footnote do
 end
 
 defmodule Md.Transforms.TwitterHandle do
-  @moduledoc false
+  @moduledoc "Internal transformation to format twitter handles"
   @behaviour Md.Transforms
 
   @href "https://twitter.com/"
@@ -170,6 +171,7 @@ defmodule Md.Transforms.TwitterHandle do
 end
 
 defmodule Md.Transforms.Youtube do
+  @moduledoc "Internal transformation to embed youtube videos"
   _ = """
   <iframe width="560"
           height="315"
@@ -181,7 +183,6 @@ defmodule Md.Transforms.Youtube do
   </iframe>
   """
 
-  @moduledoc false
   @behaviour Md.Transforms
 
   @href "https://www.youtube.com/embed/"

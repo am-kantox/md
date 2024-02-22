@@ -105,12 +105,19 @@ defmodule Md.MixProject do
         # Md,
         # Md.Listener,
         # Md.Parser,
+        # Md.Transforms,
 
         "Parser Internals": [
           Md.Parser.Default,
           Md.Parser.State,
           Md.Parser.Syntax,
           Md.Parser.Syntax.Void
+        ],
+        "Custom Transforms": [
+          Md.Transforms.Anchor,
+          Md.Transforms.Footnote,
+          Md.Transforms.TwitterHandle,
+          Md.Transforms.Youtube
         ]
       ]
     ]
