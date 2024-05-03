@@ -325,25 +325,13 @@ defmodule Md.Engine do
                    bag: %{deferred: deferreds}
                  } = state
                )
-               when length(deferreds) > 0 do
-            if disclosure in deferreds do
-              state =
-                state
-                |> replace_mode({:inner, :raw})
-                |> push_path({:__deferred__, disclosure, []})
+               when length(deferreds) > 0 and in_short_list(disclosure, deferreds) do
+            state =
+              state
+              |> replace_mode({:inner, :raw})
+              |> push_path({:__deferred__, disclosure, []})
 
-              do_parse(rest, state)
-            else
-              <<c::binary-size(1), rest::binary>> = input
-
-              state =
-                state
-                |> pop_mode([{:linefeed, pos}, :md])
-                |> push_mode({:linefeed, pos})
-                |> push_char(c)
-
-              do_parse(rest, state)
-            end
+            do_parse(rest, state)
           end
         end)
 
@@ -822,7 +810,10 @@ defmodule Md.Engine do
                } = state
              )
              when mode not in [{:inner, :raw}] do
-          state = state |> pop_mode(unquote(inner_mode)) |> push_mode(:raw)
+          state =
+            state
+            |> pop_mode(unquote(inner_mode))
+            |> push_mode(:raw)
 
           do_parse(rest, %Md.Parser.State{
             state
@@ -866,7 +857,7 @@ defmodule Md.Engine do
                <<unquote(inner_closing), rest::binary>>,
                %Md.Parser.State{
                  mode: [mode | _],
-                 bag: %{stock: outer_content},
+                 bag: %{stock: [_ | _] = outer_content},
                  path: [{unquote(tag), attrs, [content]} | path_tail]
                } = state
              ) do
@@ -926,7 +917,7 @@ defmodule Md.Engine do
                  <<unquote(disclosure_closing), rest::binary>>,
                  %Md.Parser.State{
                    mode: [mode | _],
-                   bag: %{stock: outer_content},
+                   bag: %{stock: [_ | _] = outer_content},
                    path: [{unquote(tag), attrs, [content]} | path_tail]
                  } = state
                )
@@ -1530,22 +1521,13 @@ defmodule Md.Engine do
 
       defp push_char(empty({:linefeed, _}), <<?\s>>), do: state
 
-      defp push_char(empty({:linefeed, _}), x) do
+      defp push_char(empty(_), x) do
         state =
           state
           |> listener({:tag, nest(:outer), true})
           |> listener({:char, x})
 
         %Md.Parser.State{state | path: [{nest(:outer), nil, [x]}]}
-      end
-
-      defp push_char(empty(_), x) do
-        state =
-          state
-          |> listener({:tag, nest(:span), true})
-          |> listener({:char, x})
-
-        %Md.Parser.State{state | path: [{nest(:span), nil, [x]}]}
       end
 
       defp push_char(state(), x),

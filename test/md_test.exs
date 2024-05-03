@@ -566,6 +566,16 @@ defmodule MdTest do
 
     assert [{:p, nil, ["[", {:a, %{href: "https://foo.com"}, ["TEST"]}, "]"]}] =
              Md.parse("\\[[TEST](https://foo.com)]").ast
+
+    assert [
+             {:p, nil,
+              ["so cool ", {:a, %{href: "https://man.freebsd.org/vxlan"}, ["vxlan(4)"]}, " there"]}
+           ] = Md.parse("so cool [vxlan(4)](https://man.freebsd.org/vxlan) there").ast
+
+    assert [
+             {:p, nil,
+              ["so cool ", {:a, %{href: "https://man.freebsd.org/vxlan"}, ["vxlan[4]"]}, " there"]}
+           ] = Md.parse("so cool [vxlan[4]](https://man.freebsd.org/vxlan) there").ast
   end
 
   test "attributes" do
@@ -613,24 +623,27 @@ defmodule MdTest do
     input = """
     Hi,
 
-    check this [link][1]!
+    check this [link][1] and this [link][linkref]!
 
     Another [text].
 
     [1]: https://example.com
     [2]: https://example.com
+    [linkref]: https://example.com
     """
 
     assert [
              {:p, nil, ["Hi,"]},
-             {:p, nil, ["check this ", {:a, %{href: "https://example.com"}, ["link"]}, "!"]},
              {:p, nil,
               [
-                "Another [text].",
-                "\n",
-                "\n[2]: ",
-                {:a, %{href: "https://example.com"}, ["https://example.com"]}
-              ]}
+                "check this ",
+                {:a, %{href: "https://example.com"}, ["link"]},
+                " and this ",
+                {:a, %{href: "https://example.com"}, ["link"]},
+                "!"
+              ]},
+             {:p, nil, ["Another [text]."]},
+             {:p, nil, ["[2]: ", {:a, %{href: "https://example.com"}, ["https://example.com"]}]}
            ] == Md.parse(input).ast
   end
 

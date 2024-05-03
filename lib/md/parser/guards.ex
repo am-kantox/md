@@ -76,4 +76,17 @@ defmodule Md.Guards do
 
     defguard is_utf8_digit(char) when is_integer(char) and match?(char, "[[:N:]]")
   end
+
+  @doc false
+  defguard in_short_list(what, list)
+           when hd(list) == what or
+                  hd(tl(list)) == what or
+                  hd(tl(tl(list))) == what or
+                  hd(tl(tl(tl(list)))) == what or
+                  hd(tl(tl(tl(tl(list))))) == what or
+                  hd(tl(tl(tl(tl(tl(list)))))) == what or
+                  hd(tl(tl(tl(tl(tl(tl(list))))))) == what or
+                  hd(tl(tl(tl(tl(tl(tl(tl(list)))))))) == what or
+                  hd(tl(tl(tl(tl(tl(tl(tl(tl(list))))))))) == what or
+                  hd(tl(tl(tl(tl(tl(tl(tl(tl(tl(list)))))))))) == what
 end

@@ -7,7 +7,7 @@ defmodule Md.Parser.Syntax.Default do
   @behaviour Syntax
 
   @ol_max Application.compile_env(:md, :ol_max, 10)
-  @disclosure_range 3..5
+  @disclosure_range 3..12
 
   @impl Syntax
   def settings,
