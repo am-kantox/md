@@ -656,7 +656,7 @@ defmodule MdTest do
     [link]: https://example.com/
     """
 
-    assert [{:p, nil, ["a", {:a, %{href: "https://example.com/"}, ["link"]}]}] ==
+    assert [{:p, nil, ["a ", {:a, %{href: "https://example.com/"}, ["link"]}]}] ==
              Md.parse(input).ast
   end
 
