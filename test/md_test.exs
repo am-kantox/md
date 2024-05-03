@@ -651,7 +651,7 @@ defmodule MdTest do
 
   test "deferred links" do
     input = """
-    a [link]
+    a [link][link]
 
     [link]: https://example.com/
     """
