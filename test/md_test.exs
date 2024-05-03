@@ -665,7 +665,7 @@ defmodule MdTest do
     [vxlan(4)](https://man.freebsd.org/vxlan)
     """
 
-    assert [{:p, nil, [{:a, %{href: "https://man.freebsd.org/vxlan"}, ["vxlan(4)"]}]}] ==
+    assert [{:a, %{href: "https://man.freebsd.org/vxlan"}, ["vxlan(4)"]}] ==
              Md.parse(input).ast
   end
 
