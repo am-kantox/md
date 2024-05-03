@@ -662,6 +662,26 @@ defmodule MdTest do
   #          ] == Md.parse(input).ast
   # end
 
+  test "deferred links" do
+    input = """
+    a [link][link]
+
+    [link]: https://example.com/
+    """
+
+    assert [{:p, nil, ["a ", {:a, %{href: "https://example.com/"}, ["link"]}]}] ==
+             Md.parse(input).ast
+  end
+
+  test "complex links" do
+    input = """
+    [vxlan(4)](https://man.freebsd.org/vxlan)
+    """
+
+    assert [{:a, %{href: "https://man.freebsd.org/vxlan"}, ["vxlan(4)"]}] ==
+             Md.parse(input).ast
+  end
+
   test "tables" do
     input = """
     Hi,
