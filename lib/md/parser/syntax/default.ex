@@ -52,11 +52,40 @@ defmodule Md.Parser.Syntax.Default do
       ],
       magnet: [
         # {"⚓", %{transform: Anchor, terminators: []}},
-        {"[^", %{transform: Footnote, terminators: [?\]], greedy: true}},
-        {"@", %{transform: &TwitterHandle.apply/2, terminators: [?,, ?., ?!, ??, ?:, ?;]}},
-        {"https://", %{transform: Anchor, terminators: [], greedy: :left}},
-        {"http://", %{transform: Anchor, terminators: [], greedy: :left}},
-        {"✇", %{transform: &Youtube.apply/2, terminators: [], greedy: :left}}
+        {"[^",
+         %{
+           transform: Footnote,
+           terminators: [?\]],
+           greedy: true,
+           ignore_in: [:img, :a, :figure, :abbr]
+         }},
+        {"@",
+         %{
+           transform: &TwitterHandle.apply/2,
+           terminators: [?,, ?., ?!, ??, ?:, ?;, ?[, ?], ?(, ?)],
+           ignore_in: [:img, :a, :figure, :abbr]
+         }},
+        {"https://",
+         %{
+           transform: Anchor,
+           terminators: [],
+           greedy: :left,
+           ignore_in: [:img, :a, :figure, :abbr]
+         }},
+        {"http://",
+         %{
+           transform: Anchor,
+           terminators: [],
+           greedy: :left,
+           ignore_in: [:img, :a, :figure, :abbr]
+         }},
+        {"✇",
+         %{
+           transform: &Youtube.apply/2,
+           terminators: [],
+           greedy: :left,
+           ignore_in: [:img, :a, :figure, :abbr]
+         }}
       ],
       block: [
         {"```", %{tag: [:pre, :code], pop: %{code: [attribute: :class, prefixes: ["", "lang-"]]}}}

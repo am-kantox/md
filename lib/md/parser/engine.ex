@@ -388,10 +388,10 @@ defmodule Md.Engine do
                <<x::utf8, delim::utf8, rest::binary>>,
                %Md.Parser.State{
                  bag: %{stock: [stock, unquote(md)]},
-                 mode: [mode | _]
+                 mode: [:magnet | _]
                } = state
              )
-             when mode == :magnet and is_utf8_space(delim) do
+             when is_utf8_space(delim) do
           {pre, post, delim} =
             case unquote(greedy) do
               :left -> {unquote(md), "", <<delim::utf8>>}
@@ -439,8 +439,15 @@ defmodule Md.Engine do
         do_parse(rest, state)
       end
 
-      Enum.each(magnets, fn {md, _properties} ->
-        defp do_parse(unquote(md) <> rest, state()) when mode not in [:raw, {:inner, :raw}] do
+      Enum.each(magnets, fn {md, properties} ->
+        ignore_in = properties |> Map.get(:ignore_in) |> List.wrap()
+
+        defp do_parse(
+               unquote(md) <> rest,
+               %Md.Parser.State{mode: [mode | _], path: path} = state
+             )
+             when mode not in [:raw, {:inner, :raw}] and
+                    (path == [] or elem(hd(path), 0) not in unquote(ignore_in)) do
           state =
             %Md.Parser.State{state | bag: %{state.bag | stock: ["", unquote(md)]}}
             |> push_mode(:magnet)

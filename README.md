@@ -142,6 +142,7 @@ Instead of `@syntax` module attribute, one might use
 
 ### Changelog
 
+- **`0.10.4`** fix pairs with special symbols inside
 - **`0.10.2`** spaces as delimiters in attributes
 - **`0.10.1`** support for the flaky `floki` update
 - **`0.10.0`** [:tag:] attributes for tags
