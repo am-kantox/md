@@ -1,9 +1,9 @@
 defmodule Md.Engine do
   @moduledoc false
 
-  @spec closing_match(Md.Listener.branch()) :: Macro.t()
-  def closing_match(tags) do
-    us = Macro.var(:_, %Macro.Env{}.context)
+  @spec closing_match(Md.Listener.branch(), module()) :: Macro.t()
+  def closing_match(tags, context) do
+    us = Macro.var(:_, context)
     Enum.reduce(tags, [], &[{:{}, [], [&1, us, us]} | &2])
   end
 
@@ -543,7 +543,7 @@ defmodule Md.Engine do
   defmacro block(blocks) do
     quote generated: true,
           location: :keep,
-          bind_quoted: [blocks: blocks],
+          bind_quoted: [blocks: blocks, ctx: __CALLER__.module],
           context: __CALLER__.module do
       Enum.each(blocks, fn {md, properties} ->
         [tag | _] = tags = List.wrap(properties[:tag])
@@ -551,7 +551,7 @@ defmodule Md.Engine do
         attrs = Macro.escape(properties[:attributes])
         pop = Macro.escape(properties[:pop])
 
-        closing_match = Md.Engine.closing_match(tags)
+        closing_match = Md.Engine.closing_match(tags, ctx)
 
         defp do_parse(<<unquote(md), rest::binary>>, state_linefeed()) do
           state =
@@ -600,14 +600,14 @@ defmodule Md.Engine do
   defmacro shift(shifts) do
     quote generated: true,
           location: :keep,
-          bind_quoted: [shifts: shifts],
+          bind_quoted: [shifts: shifts, ctx: __CALLER__.module],
           context: __CALLER__.module do
       Enum.each(shifts, fn {md, properties} ->
         [tag | _] = tags = List.wrap(properties[:tag])
         mode = Map.get(properties, :mode, {:inner, :raw})
         attrs = Macro.escape(properties[:attributes])
 
-        closing_match = Md.Engine.closing_match(tags)
+        closing_match = Md.Engine.closing_match(tags, ctx)
 
         defp do_parse(
                <<unquote(md), rest::binary>>,
@@ -999,7 +999,7 @@ defmodule Md.Engine do
   defmacro paragraph(paragraphs) do
     quote generated: true,
           location: :keep,
-          bind_quoted: [paragraphs: paragraphs],
+          bind_quoted: [paragraphs: paragraphs, ctx: __CALLER__.module],
           context: __CALLER__.module do
       Enum.each(paragraphs, fn {md, properties} ->
         [tag | _] = tags = List.wrap(properties[:tag])
@@ -1007,7 +1007,7 @@ defmodule Md.Engine do
         attrs = Macro.escape(properties[:attributes])
         rewind_until = List.last(tags)
 
-        closing_match = Md.Engine.closing_match(tags)
+        closing_match = Md.Engine.closing_match(tags, ctx)
 
         defp do_parse(<<unquote(md), rest::binary>>, empty({:linefeed, _pos})) do
           state =
@@ -1277,7 +1277,7 @@ defmodule Md.Engine do
   defmacro tag(tags) do
     quote generated: true,
           location: :keep,
-          bind_quoted: [tags: tags],
+          bind_quoted: [tags: tags, ctx: __CALLER__.module],
           context: __CALLER__.module do
       Enum.each(tags, fn {md, properties} ->
         [tag] =
@@ -1286,7 +1286,7 @@ defmodule Md.Engine do
         mode = Map.get(properties, :mode, :md)
         attrs = Macro.escape(properties[:attributes])
         closing = Map.get(properties, :closing, "</#{tag}>")
-        closing_match = Md.Engine.closing_match(tags)
+        closing_match = Md.Engine.closing_match(tags, ctx)
 
         defp do_parse(
                <<unquote(closing), rest::binary>>,
@@ -1320,14 +1320,14 @@ defmodule Md.Engine do
   defmacro brace(braces) do
     quote generated: true,
           location: :keep,
-          bind_quoted: [braces: braces],
+          bind_quoted: [braces: braces, ctx: __CALLER__.module],
           context: __CALLER__.module do
       Enum.each(braces, fn {md, properties} ->
         [tag | _] = tags = List.wrap(properties[:tag])
         mode = Map.get(properties, :mode)
         attrs = Macro.escape(properties[:attributes])
         closing = Map.get(properties, :closing, md)
-        closing_match = Md.Engine.closing_match(tags)
+        closing_match = Md.Engine.closing_match(tags, ctx)
 
         defp do_parse(
                <<unquote(closing), rest::binary>>,
