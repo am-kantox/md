@@ -24,6 +24,8 @@ defmodule Md.Parser do
   Once the original parser would meet the `"!["` binary, it’d call `MyApp.Parsers.Img.parse/2`.
   The latter must proceed until the tag is closed and return the remainder and the updated state
   as a tuple.
+
+  Custom parsers implementation examples might be found [here](https://github.com/am-kantox/md/tree/master/examples).
   """
   alias Md.Listener, as: L
   alias Md.Parser.State
