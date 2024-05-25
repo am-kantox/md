@@ -33,6 +33,17 @@ defmodule Md do
   def parse(input, state \\ %State{}),
     do: with({"", state} <- state.type.parse(input, state), do: state)
 
+  @doc """
+  Helper function to supply a custom parser in call to `Md.parse/2` as
+
+  ```elixir
+  Md.parse("some _text_ with *markup*", Md.with(Md.Parser.Default))
+  ```
+  """
+  def with(parser) do
+    %Md.Parser.State{type: parser}
+  end
+
   defdelegate generate(input), to: Md.Parser
   defdelegate generate(input, options), to: Md.Parser
   defdelegate generate(input, parser, options), to: Md.Parser
