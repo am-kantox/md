@@ -206,7 +206,7 @@ defmodule Md.Transforms.Soundcloud do
     src =
       Enum.join(
         [
-          "https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/#{id}",
+          "https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/#{String.replace(id, "♫", "")}",
           "color=%23ff5500",
           "auto_play=false",
           "hide_related=false",
