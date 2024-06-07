@@ -2,7 +2,7 @@ defmodule Md.Parser.Syntax.Default do
   @moduledoc false
 
   alias Md.Parser.{Syntax, Syntax.Void}
-  alias Md.Transforms.{Anchor, Footnote, TwitterHandle, Youtube}
+  alias Md.Transforms.{Anchor, Footnote, Soundcloud, TwitterHandle, Youtube}
 
   @behaviour Syntax
 
@@ -82,6 +82,13 @@ defmodule Md.Parser.Syntax.Default do
         {"✇",
          %{
            transform: &Youtube.apply/2,
+           terminators: [],
+           greedy: :left,
+           ignore_in: [:img, :a, :figure, :abbr]
+         }},
+        {"♫",
+         %{
+           transform: &Soundcloud.apply/2,
            terminators: [],
            greedy: :left,
            ignore_in: [:img, :a, :figure, :abbr]

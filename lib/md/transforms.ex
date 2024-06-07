@@ -170,6 +170,65 @@ defmodule Md.Transforms.TwitterHandle do
   end
 end
 
+defmodule Md.Transforms.Soundcloud do
+  @moduledoc "Internal transformation to embed soundcloud audios"
+  _ = """
+  <iframe width="100%"
+          height="166"
+          scrolling="no"
+          frameborder="no"
+          allow="autoplay"
+          src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/1840817160&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true">
+  </iframe><div
+          style="font-size: 10px;
+          color: #cccccc;
+          line-break: anywhere;
+          word-break: normal;
+          overflow: hidden;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+          font-family: Interstate,Lucida Grande,Lucida Sans Unicode,Lucida Sans,Garuda,Verdana,Tahoma,sans-serif;
+          font-weight: 100;"><a
+          href="https://soundcloud.com/nott-lovland"
+          title="Nott Løvland"
+          target="_blank"
+          style="color: #cccccc;
+          text-decoration: none;">Nott Løvland</a> · <a href="https://soundcloud.com/nott-lovland/antiutopiya"
+          title="Антиутопия" target="_blank" style="color: #cccccc; text-decoration: none;">Антиутопия</a></div>
+  """
+
+  @behaviour Md.Transforms
+
+  @impl Md.Transforms
+  def apply(_md, track) do
+    src =
+      Enum.join(
+        [
+          "https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/#{track}",
+          "color=%23ff5500",
+          "auto_play=false",
+          "hide_related=false",
+          "show_comments=true",
+          "show_user=true",
+          "show_reposts=false",
+          "show_teaser=true"
+        ],
+        "&"
+      )
+
+    {:iframe,
+     %{
+       width: "100%",
+       height: "166",
+       src: src,
+       scrolling: "no",
+       frameborder: "no",
+       allow: "autoplay",
+       allowfullscreen: false
+     }, []}
+  end
+end
+
 defmodule Md.Transforms.Youtube do
   @moduledoc "Internal transformation to embed youtube videos"
   _ = """
