@@ -1388,10 +1388,6 @@ defmodule Md.Engine do
 
                     [k, v] ->
                       {String.to_atom(k), v |> String.trim("'") |> String.trim("\"")}
-
-                    [k, v1, v2] ->
-                      {String.to_atom(k),
-                       [v1, v2] |> Enum.join(":") |> String.trim("'") |> String.trim("\"")}
                   end)
                   |> Map.new()
 
