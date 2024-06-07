@@ -201,12 +201,12 @@ defmodule Md.Transforms.Soundcloud do
 
   @impl Md.Transforms
   def apply(_md, track) do
-    [id, author, author_link, track, title] = String.split(track, "|")
+    ["♫" <> id | details] = String.split(track, "|")
 
     src =
       Enum.join(
         [
-          "https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/#{String.replace(id, "♫", "")}",
+          "https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/#{id}",
           "color=%23ff5500",
           "auto_play=false",
           "hide_related=false",
@@ -230,31 +230,37 @@ defmodule Md.Transforms.Soundcloud do
          allowfullscreen: false
        }, []}
 
-    div =
-      {:div,
-       %{
-         style:
-           "font-size: 10px; color: #cccccc; line-break: anywhere; word-break: normal; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: Ubuntu, Interstate,Lucida Grande,Lucida Sans Unicode,Lucida Sans,Garuda,Verdana,Tahoma,sans-serif; font-weight: 100;"
-       },
-       [
-         {:a,
-          %{
-            href: "https://soundcloud.com/nott-lovland",
-            title: "Nott Løvland",
-            target: "_blank",
-            style: "color: #cccccc;text-decoration: none;"
-          }, [String.replace(author, "~", " ")]},
-         " · ",
-         {:a,
-          %{
-            href: "https://soundcloud.com/#{author_link}/#{track}",
-            title: "#{title}",
-            target: "_blank",
-            style: "color: #cccccc; text-decoration: none;"
-          }, [title]}
-       ]}
+    case details do
+      [author, author_link, track, title] ->
+        div =
+          {:div,
+           %{
+             style:
+               "font-size: 10px; color: #cccccc; line-break: anywhere; word-break: normal; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: Ubuntu, Interstate,Lucida Grande,Lucida Sans Unicode,Lucida Sans,Garuda,Verdana,Tahoma,sans-serif; font-weight: 100;"
+           },
+           [
+             {:a,
+              %{
+                href: "https://soundcloud.com/nott-lovland",
+                title: "Nott Løvland",
+                target: "_blank",
+                style: "color: #cccccc;text-decoration: none;"
+              }, [String.replace(author, "~", " ")]},
+             " · ",
+             {:a,
+              %{
+                href: "https://soundcloud.com/#{author_link}/#{track}",
+                title: "#{title}",
+                target: "_blank",
+                style: "color: #cccccc; text-decoration: none;"
+              }, [title]}
+           ]}
 
-    {:span, [], [iframe, div]}
+        {:span, [], [iframe, div]}
+
+      _ ->
+        iframe
+    end
   end
 end
 
