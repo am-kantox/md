@@ -1383,8 +1383,15 @@ defmodule Md.Engine do
                   |> String.split(~r/[,|]\s*|(?<=\w|"|')\s+(?=\w|"|')/)
                   |> Enum.map(&String.split(&1, ~r/[:=]\s*/))
                   |> Enum.map(fn
-                    [k] -> {String.to_atom(k), true}
-                    [k, v] -> {String.to_atom(k), v |> String.trim("'") |> String.trim("\"")}
+                    [k] ->
+                      {String.to_atom(k), true}
+
+                    [k, v] ->
+                      {String.to_atom(k), v |> String.trim("'") |> String.trim("\"")}
+
+                    [k, v1, v2] ->
+                      {String.to_atom(k),
+                       [v1, v2] |> Enum.join(":") |> String.trim("'") |> String.trim("\"")}
                   end)
                   |> Map.new()
 
