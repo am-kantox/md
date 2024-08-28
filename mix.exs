@@ -116,6 +116,7 @@ defmodule Md.MixProject do
         "Custom Transforms": [
           Md.Transforms.Anchor,
           Md.Transforms.Footnote,
+          Md.Transforms.Soundcloud,
           Md.Transforms.TwitterHandle,
           Md.Transforms.Youtube
         ]
