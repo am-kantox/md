@@ -1696,7 +1696,7 @@ defmodule Md.Engine do
               end
           end
 
-        for i <- 1..count, count > 0, reduce: state do
+        for i <- 1..count//1, count > 0, reduce: state do
           acc ->
             state =
               acc.path
