@@ -83,7 +83,7 @@ defmodule Md.MixProject do
   defp package do
     [
       name: @app,
-      files: ~w|lib stuff/logo-48x48.png mix.exs README.md|,
+      files: ~w|lib stuff/logo-48x48.png stuff/*.md mix.exs README.md|,
       maintainers: ["Aleksei Matiushkin"],
       licenses: ["MIT"],
       links: %{
@@ -100,7 +100,7 @@ defmodule Md.MixProject do
       canonical: "http://hexdocs.pm/#{@app}",
       logo: "stuff/logo-48x48.png",
       source_url: "https://github.com/am-kantox/#{@app}",
-      extras: ~w[README.md],
+      extras: ~w[README.md stuff/md-benefits.md],
       groups_for_modules: [
         # Md,
         # Md.Listener,
