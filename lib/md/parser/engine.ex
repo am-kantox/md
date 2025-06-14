@@ -139,7 +139,7 @@ defmodule Md.Engine do
 
         defp do_parse(unquote(md) <> rest, state()) when mode not in [:raw, {:inner, :raw}] do
           state =
-            %Md.Parser.State{state | bag: %{state.bag | stock: [""]}}
+            %{state | bag: %{state.bag | stock: [""]}}
             |> push_mode(:comment)
 
           do_parse(rest, state)
@@ -151,12 +151,12 @@ defmodule Md.Engine do
             |> listener({:comment, state.bag.stock})
             |> pop_mode(:comment)
 
-          do_parse(rest, %Md.Parser.State{state | bag: %{state.bag | stock: []}})
+          do_parse(rest, %{state | bag: %{state.bag | stock: []}})
         end
 
         defp do_parse(<<x::utf8, rest::binary>>, state()) when mode == :comment do
           [stock] = state.bag.stock
-          state = %Md.Parser.State{state | bag: %{state.bag | stock: [stock <> <<x::utf8>>]}}
+          state = %{state | bag: %{state.bag | stock: [stock <> <<x::utf8>>]}}
           do_parse(rest, state)
         end
       end)
@@ -210,10 +210,7 @@ defmodule Md.Engine do
                )
                when tag in [unquote(tag), unquote(first_inner_tag)] do
             state =
-              %Md.Parser.State{
-                state
-                | path: [{unquote(sub_tag), nil, []}, t_outer | path]
-              }
+              %{state | path: [{unquote(sub_tag), nil, []}, t_outer | path]}
               |> listener({:tag, {unquote(sub_md), unquote(sub_tag)}, true})
 
             do_parse(rest, state)
@@ -346,7 +343,7 @@ defmodule Md.Engine do
           deferred = [{disclosure, content} | state.bag.deferred]
 
           state =
-            %Md.Parser.State{state | bag: Map.put(state.bag, :deferred, deferred), path: path}
+            %{state | bag: Map.put(state.bag, :deferred, deferred), path: path}
             |> replace_mode({:linefeed, 0})
 
           do_parse(rest, state)
@@ -416,7 +413,7 @@ defmodule Md.Engine do
           transformed = unquote(transform).(unquote(md), stock)
 
           state =
-            %Md.Parser.State{state | bag: %{state.bag | stock: []}}
+            %{state | bag: %{state.bag | stock: []}}
             |> case do
               %Md.Parser.State{path: []} = state ->
                 push_path(state, {nest(:outer), nil, [transformed]})
@@ -434,7 +431,7 @@ defmodule Md.Engine do
       defp do_parse(<<x::utf8, rest::binary>>, state(:magnet)) do
         [stock, md] = state.bag.stock
 
-        state = %Md.Parser.State{state | bag: %{state.bag | stock: [stock <> <<x::utf8>>, md]}}
+        state = %{state | bag: %{state.bag | stock: [stock <> <<x::utf8>>, md]}}
 
         do_parse(rest, state)
       end
@@ -449,7 +446,7 @@ defmodule Md.Engine do
              when mode not in [:raw, {:inner, :raw}] and
                     (path == [] or elem(hd(path), 0) not in unquote(ignore_in)) do
           state =
-            %Md.Parser.State{state | bag: %{state.bag | stock: ["", unquote(md)]}}
+            %{state | bag: %{state.bag | stock: ["", unquote(md)]}}
             |> push_mode(:magnet)
 
           do_parse(rest, state)
@@ -645,7 +642,7 @@ defmodule Md.Engine do
                  path: [unquote_splicing(closing_match) | _]
                } = state
              ) do
-          state = %Md.Parser.State{state | mode: [nested, unquote(mode) | modes]}
+          state = %{state | mode: [nested, unquote(mode) | modes]}
           do_parse(input, state)
         end
 
@@ -822,7 +819,7 @@ defmodule Md.Engine do
             |> pop_mode(unquote(inner_mode))
             |> push_mode(:raw)
 
-          do_parse(rest, %Md.Parser.State{
+          do_parse(rest, %{
             state
             | bag: %{state.bag | stock: content},
               path: [{unquote(tag), attrs, []} | path_tail]
@@ -852,7 +849,7 @@ defmodule Md.Engine do
                  } = state
                )
                when mode not in [:raw, {:inner, :raw}] do
-            do_parse(rest, %Md.Parser.State{
+            do_parse(rest, %{
               state
               | bag: %{state.bag | stock: content},
                 path: [{unquote(tag), attrs, []} | path_tail]
@@ -898,7 +895,7 @@ defmodule Md.Engine do
             end
 
           state =
-            %Md.Parser.State{state | bag: %{state.bag | stock: []}, path: [final_tag | path_tail]}
+            %{state | bag: %{state.bag | stock: []}, path: [final_tag | path_tail]}
             |> to_ast()
             |> replace_mode(:md)
 
@@ -916,7 +913,7 @@ defmodule Md.Engine do
                )
                when mode not in [:raw, {:inner, :raw}] and is_binary(content) do
             content = unquote(disclosure_opening) <> content <> unquote(disclosure_closing)
-            state = push_char(%Md.Parser.State{state | path: path_tail}, content)
+            state = push_char(%{state | path: path_tail}, content)
             do_parse(rest, state)
           end
 
@@ -985,7 +982,7 @@ defmodule Md.Engine do
               |> Map.update!(:deferred, &[content | &1])
 
             state =
-              %Md.Parser.State{state | bag: bag, path: [final_tag | path_tail]}
+              %{state | bag: bag, path: [final_tag | path_tail]}
               |> to_ast()
               |> replace_mode(:md)
 
@@ -1060,7 +1057,7 @@ defmodule Md.Engine do
                <<unquote(md), rest::binary>>,
                %Md.Parser.State{mode: [{:nested, _, _} = nested, {:inner, :raw} | modes]} = state
              ) do
-          state = %Md.Parser.State{state | mode: [{:linefeed, 0}, {:inner, :raw}, nested | modes]}
+          state = %{state | mode: [{:linefeed, 0}, {:inner, :raw}, nested | modes]}
 
           do_parse(rest, state)
         end
@@ -1082,10 +1079,7 @@ defmodule Md.Engine do
 
           case state do
             %Md.Parser.State{mode: [{:inner, {_, _}, _} | _]} ->
-              state = %Md.Parser.State{
-                state
-                | bag: %{state.bag | indent: [pos | state.bag.indent]}
-              }
+              state = %{state | bag: %{state.bag | indent: [pos | state.bag.indent]}}
 
               do_parse(rest, state)
 
@@ -1132,10 +1126,7 @@ defmodule Md.Engine do
               for tag <- [unquote(outer) | unquote(tags)], do: {tag, unquote(attrs), []}
             )
 
-          do_parse(rest, %Md.Parser.State{
-            state
-            | bag: %{state.bag | indent: [pos | state.bag.indent]}
-          })
+          do_parse(rest, %{state | bag: %{state.bag | indent: [pos | state.bag.indent]}})
         end
 
         defp do_parse(
@@ -1180,7 +1171,7 @@ defmodule Md.Engine do
                   {unquote(tag), unquote(attrs), []}
                 ])
 
-              do_parse(rest, %Md.Parser.State{state | bag: %{state.bag | indent: [pos | indents]}})
+              do_parse(rest, %{state | bag: %{state.bag | indent: [pos | indents]}})
 
             {:inner, {unquote(tag), unquote(outer)}, pos} when pos < indent ->
               {skipped, indents} = Enum.split_while(indents, &(&1 > pos))
@@ -1195,7 +1186,7 @@ defmodule Md.Engine do
                 |> listener({:tag, {unquote(md), unquote(tag)}, true})
                 |> push_path({unquote(tag), unquote(attrs), []})
 
-              do_parse(rest, %Md.Parser.State{state | bag: %{state.bag | indent: indents}})
+              do_parse(rest, %{state | bag: %{state.bag | indent: indents}})
           end
         end
 
@@ -1242,7 +1233,7 @@ defmodule Md.Engine do
                     for tag <- [unquote(outer) | unquote(tags)], do: {tag, unquote(attrs), []}
                   )
 
-                %Md.Parser.State{state | bag: %{state.bag | indent: [pos | indents]}}
+                %{state | bag: %{state.bag | indent: [pos | indents]}}
 
               [^pos | _] ->
                 state
@@ -1265,7 +1256,7 @@ defmodule Md.Engine do
                   |> listener({:tag, {unquote(md), unquote(tag)}, true})
                   |> push_path({unquote(tag), unquote(attrs), []})
 
-                %Md.Parser.State{state | bag: %{state.bag | indent: indents}}
+                %{state | bag: %{state.bag | indent: indents}}
             end
 
           do_parse(rest, state)
@@ -1391,10 +1382,7 @@ defmodule Md.Engine do
                   end)
                   |> Map.new()
 
-                %Md.Parser.State{
-                  state
-                  | path: [{tag, Map.merge(attrs || %{}, set), collected} | t]
-                }
+                %{state | path: [{tag, Map.merge(attrs || %{}, set), collected} | t]}
 
               _ ->
                 state
@@ -1410,10 +1398,7 @@ defmodule Md.Engine do
              )
              when mode not in [:raw, {:inner, :raw}] do
           state =
-            %Md.Parser.State{
-              state
-              | path: [{tag, attrs || %{}, ["" | content || []]} | t]
-            }
+            %{state | path: [{tag, attrs || %{}, ["" | content || []]} | t]}
             # |> listener({:attribute, {unquote(md), unquote(tag)}, true})
             |> push_mode(unquote(mode))
 
@@ -1457,7 +1442,7 @@ defmodule Md.Engine do
           location: :keep,
           context: __CALLER__.module do
       defp do_parse("", %Md.Parser.State{bag: %{stock: [last | rest]}} = state) do
-        do_parse(last, %Md.Parser.State{state | bag: %{state.bag | stock: rest}})
+        do_parse(last, %{state | bag: %{state.bag | stock: rest}})
       end
 
       defp do_parse("", state()) do
@@ -1467,7 +1452,7 @@ defmodule Md.Engine do
           |> rewind_state(trim: true)
           |> apply_deferreds()
 
-        state = %Md.Parser.State{
+        state = %{
           state
           | mode: [:finished],
             bag: %{state.bag | indent: [], stock: []}
@@ -1537,11 +1522,11 @@ defmodule Md.Engine do
           |> listener({:tag, nest(:outer), true})
           |> listener({:char, x})
 
-        %Md.Parser.State{state | path: [{nest(:outer), nil, [x]}]}
+        %{state | path: [{nest(:outer), nil, [x]}]}
       end
 
       defp push_char(state(), x),
-        do: %Md.Parser.State{state | path: do_push_char(x, state.path, mode)}
+        do: %{state | path: do_push_char(x, state.path, mode)}
 
       @spec do_push_char(binary(), [Md.Listener.trace()], Md.Listener.parse_mode()) :: [
               Md.Listener.trace()
@@ -1578,35 +1563,35 @@ defmodule Md.Engine do
         do: Enum.count(state.path, &match?({^tag, _, _}, &1))
 
       @spec set_mode(Md.Listener.state(), Md.Listener.parse_mode()) :: Md.Listener.state()
-      defp set_mode(state(), value), do: %Md.Parser.State{state | mode: [value]}
+      defp set_mode(state(), value), do: %{state | mode: [value]}
 
       @spec replace_mode(Md.Listener.state(), Md.Listener.parse_mode() | nil) ::
               Md.Listener.state()
       defp replace_mode(state(), nil), do: state
 
       defp replace_mode(%Md.Parser.State{mode: [_ | modes]} = state, value),
-        do: %Md.Parser.State{state | mode: [value | modes]}
+        do: %{state | mode: [value | modes]}
 
       @spec push_mode(Md.Listener.state(), Md.Listener.parse_mode()) :: Md.Listener.state()
       defp push_mode(state(), nil), do: state
       defp push_mode(%Md.Parser.State{mode: [mode | _]} = state, mode), do: state
 
       defp push_mode(%Md.Parser.State{} = state, value),
-        do: %Md.Parser.State{state | mode: [value | state.mode]}
+        do: %{state | mode: [value | state.mode]}
 
       # @dialyzer {:nowarn_function, pop_mode: 1, pop_mode: 2}
       # @spec pop_mode(Md.Listener.state()) :: Md.Listener.state()
-      # defp pop_mode(state()), do: %Md.Parser.State{state | mode: tl(state.mode)}
+      # defp pop_mode(state()), do: %{state | mode: tl(state.mode)}
 
       @dialyzer {:nowarn_function, pop_mode: 2}
       @spec pop_mode(Md.Listener.state(), Md.Listener.element() | [Md.Listener.element()]) ::
               Md.Listener.state()
       defp pop_mode(state(), modes) when is_list(modes) do
         {_, modes} = Enum.split_while(state.mode, &(&1 in modes))
-        %Md.Parser.State{state | mode: modes}
+        %{state | mode: modes}
       end
 
-      defp pop_mode(state(), mode), do: %Md.Parser.State{state | mode: tl(state.mode)}
+      defp pop_mode(state(), mode), do: %{state | mode: tl(state.mode)}
       defp pop_mode(state(), _), do: state
 
       @spec push_path(Md.Listener.state(), Md.Listener.branch() | [Md.Listener.branch()]) ::
@@ -1615,7 +1600,7 @@ defmodule Md.Engine do
         do: Enum.reduce(elements, state, &push_path(&2, &1))
 
       defp push_path(%Md.Parser.State{path: path} = state, element),
-        do: %Md.Parser.State{state | path: [element | path]}
+        do: %{state | path: [element | path]}
     end
   end
 
@@ -1668,7 +1653,7 @@ defmodule Md.Engine do
         content_fun = fn content, acc, pop ->
           if Enum.all?(content, &is_binary/1) and
                content |> Enum.join() |> String.trim() == "",
-             do: {:cont, {true, %Md.Parser.State{acc | path: tl(acc.path)}}},
+             do: {:cont, {true, %{acc | path: tl(acc.path)}}},
              else: {:cont, {false, to_ast(acc, pop)}}
         end
 
@@ -1734,7 +1719,7 @@ defmodule Md.Engine do
               other
           end)
 
-        %Md.Parser.State{state | ast: ast}
+        %{state | ast: ast}
       end
 
       @spec update_attrs(Md.Listener.branch(), %{required(atom()) => atom()}) ::
@@ -1773,7 +1758,7 @@ defmodule Md.Engine do
           |> trim(false)
           |> maybe_hide()
 
-        state = %Md.Parser.State{state | path: [], ast: [last | ast]}
+        state = %{state | path: [], ast: [last | ast]}
         listener(state, {:tag, tag, false})
       end
 
@@ -1788,7 +1773,7 @@ defmodule Md.Engine do
           |> trim(false)
           |> maybe_hide()
 
-        state = %Md.Parser.State{state | path: [{elem, attrs, [last | branch]} | rest]}
+        state = %{state | path: [{elem, attrs, [last | branch]} | rest]}
         listener(state, {:tag, tag, false})
       end
 

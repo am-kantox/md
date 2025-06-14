@@ -201,7 +201,7 @@ defmodule Md.Transforms.Soundcloud do
 
   @impl Md.Transforms
   def apply(_md, track) do
-    ["♫" <> id | details] = String.split(track, "|")
+    [<<_note::utf8, id::binary>> | details] = String.split(track, "|")
 
     src =
       Enum.join(
@@ -282,7 +282,7 @@ defmodule Md.Transforms.Youtube do
   @href "https://www.youtube.com/embed/"
 
   @impl Md.Transforms
-  def apply(_md, text) do
+  def apply(_md, <<_reel::utf8, text::binary>>) do
     src = text |> String.split("/") |> List.last()
 
     {:iframe,

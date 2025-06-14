@@ -27,4 +27,3 @@ defmodule MyDSLParser do
 end
 
 ExUnit.start()
-Mneme.start()

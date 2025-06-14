@@ -18,14 +18,6 @@ defmodule Md.MixProject do
       aliases: aliases(),
       docs: docs(),
       test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: [
-        credo: :ci,
-        dialyzer: :ci,
-        tests: :test,
-        "coveralls.json": :test,
-        "coveralls.html": :test,
-        "quality.ci": :ci
-      ],
       dialyzer: [
         plt_file: {:no_warn, ".dialyzer/plts/dialyzer.plt"},
         plt_add_apps: [:floki],
@@ -39,6 +31,19 @@ defmodule Md.MixProject do
     [
       extra_applications: [:logger, :inets],
       mod: {Md.Application, []}
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: [
+        credo: :ci,
+        dialyzer: :ci,
+        tests: :test,
+        "coveralls.json": :test,
+        "coveralls.html": :test,
+        "quality.ci": :ci
+      ]
     ]
   end
 
@@ -56,7 +61,6 @@ defmodule Md.MixProject do
       {:excoveralls, "~> 0.14", only: :test, runtime: false},
       {:dialyxir, "~> 1.0", only: :ci, runtime: false},
       {:ex_doc, ">= 0.0.0", only: [:ci, :dev]},
-      {:mneme, "~> 0.3", only: :test},
       {:benchfella, "~> 0.3", only: :ci},
       {:earmark, "~> 1.4", only: :ci}
     ]

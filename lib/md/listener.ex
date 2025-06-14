@@ -129,7 +129,7 @@ defmodule Md.Listener.Beautifier do
 
   def handle_tag({:p, false}, %State{ast: [{:p, attrs, [title]}]} = state)
       when byte_size(title) < 128 do
-    {:update, %State{state | ast: [{:h1, attrs, [title]}]}}
+    {:update, %{state | ast: [{:h1, attrs, [title]}]}}
   end
 
   def handle_tag(_, _), do: :ok
