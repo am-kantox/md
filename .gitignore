@@ -33,5 +33,6 @@ bench/snapshots/
 
 /.elixir_ls/
 /.elixir-tools/
-
 /.tool-versions
+
+/.erl.history/

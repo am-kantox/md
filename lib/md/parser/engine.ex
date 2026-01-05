@@ -795,6 +795,20 @@ defmodule Md.Engine do
 
         inner_mode = if match?({:attribute, {_, _}}, outer), do: :raw, else: :md
 
+        defp do_parse(
+               <<unquote(md), unquote(closing), unquote(inner_opening), rest::binary>>,
+               state()
+             )
+             when mode not in [:raw, {:inner, :raw}] do
+          state =
+            state
+            |> listener({:tag, {unquote(md), unquote(tag)}, unquote(inner_tag)})
+            |> push_mode(:raw)
+            |> push_path(for tag <- unquote(tags), do: {tag, unquote(attrs), []})
+
+          do_parse(rest, %{state | bag: %{state.bag | stock: [""]}})
+        end
+
         defp do_parse(<<unquote(md), rest::binary>>, state())
              when mode not in [:raw, {:inner, :raw}] do
           state =

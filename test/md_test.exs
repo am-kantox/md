@@ -602,6 +602,8 @@ defmodule MdTest do
 
     check this ![some_title](https://example.com)!
 
+    and this ![](https://example.com)!
+
     and this: !![removed ~title~](https://example.com)!
     """
 
@@ -609,6 +611,7 @@ defmodule MdTest do
              {:p, nil, ["Hi,"]},
              {:p, nil,
               ["check this ", {:img, %{src: "https://example.com", title: "some_title"}, []}, "!"]},
+             {:p, nil, ["and this ", {:img, %{title: "", src: "https://example.com"}, []}, "!"]},
              {:p, nil,
               [
                 "and this: ",
