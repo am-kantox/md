@@ -407,6 +407,18 @@ defmodule MdTest do
     end)
   end
 
+  test "list with anchors" do
+    input = """
+    * https://example.com
+    * Example dot com
+    """
+
+    assert [
+      {:ul, nil, [
+        {:li, nil, [{:a, %{href: "https://example.com"}, ["https://example.com"]}, "\u00A0"]},
+        {:li, nil, ["Example dot com"]}]}] == Md.parse(input).ast
+  end
+
   test "blockquote" do
     input = """
     This is a paragraph.

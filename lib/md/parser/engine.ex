@@ -424,6 +424,11 @@ defmodule Md.Engine do
             |> listener({:tag, {unquote(md), :magnet}, nil})
             |> pop_mode(:magnet)
 
+          rest =
+            case state.mode do
+              [{:inner, _, _} | _] -> " " <> rest
+              _ -> rest
+            end
           do_parse(rest, state)
         end
       end)
