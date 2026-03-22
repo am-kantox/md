@@ -2,7 +2,7 @@ defmodule Md.MixProject do
   use Mix.Project
 
   @app :md
-  @version "0.11.1"
+  @version "0.12.0"
 
   def project do
     [
@@ -105,7 +105,7 @@ defmodule Md.MixProject do
       canonical: "http://hexdocs.pm/#{@app}",
       logo: "stuff/logo-48x48.png",
       source_url: "https://github.com/am-kantox/#{@app}",
-      extras: ~w[README.md stuff/md-benefits.md],
+      extras: ~w[README.md stuff/md-benefits.md stuff/handler-parameters.md],
       groups_for_modules: [
         # Md,
         # Md.Listener,
