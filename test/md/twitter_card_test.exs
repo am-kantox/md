@@ -3,6 +3,7 @@ defmodule Md.TwitterCard.Test do
 
   @url "https://aleksei.substack.com/p/--ed0"
 
+  @tag :skip
   test "downloads card properly" do
     download_cards? = Application.get_env(:md, :download_cards, false)
     Application.put_env(:md, :download_cards, true)

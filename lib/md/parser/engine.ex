@@ -319,10 +319,10 @@ defmodule Md.Engine do
                  <<disclosure::binary-size(unquote(len)), unquote(md), rest::binary>> = input,
                  %Md.Parser.State{
                    mode: [{:linefeed, pos} | _],
-                   bag: %{deferred: deferreds}
+                   bag: %{deferred: [_ | _] = deferreds}
                  } = state
                )
-               when length(deferreds) > 0 and in_short_list(disclosure, deferreds) do
+               when in_short_list(disclosure, deferreds) do
             state =
               state
               |> replace_mode({:inner, :raw})
@@ -429,6 +429,7 @@ defmodule Md.Engine do
               [{:inner, _, _} | _] -> " " <> rest
               _ -> rest
             end
+
           do_parse(rest, state)
         end
       end)
@@ -555,34 +556,82 @@ defmodule Md.Engine do
 
         closing_match = Md.Engine.closing_match(tags, ctx)
 
-        defp do_parse(<<unquote(md), rest::binary>>, state_linefeed()) do
-          state =
-            state
-            |> listener({:tag, {unquote(md), unquote(tag)}, true})
-            |> push_path(for tag <- unquote(tags), do: {tag, unquote(attrs), []})
-            |> set_mode(unquote(mode))
+        case mode do
+          {:outer, _} ->
+            defp do_parse(<<unquote(md), rest::binary>>, state_linefeed()) do
+              outer = Map.get(state.bag, :outer, [])
 
-          do_parse(rest, state)
-        end
+              case outer do
+                [{unquote(tag), unquote(md), marker, block_attrs} | outer_rest] ->
+                  state = rewind_state(state, trim: true)
 
-        defp do_parse(
-               <<unquote(md), rest::binary>>,
-               %Md.Parser.State{path: [unquote_splicing(closing_match) | _]} = state
-             ) do
-          state =
-            state
-            |> rewind_state(pop: unquote(pop))
-            |> pop_mode(unquote(mode))
-            |> push_mode(:md)
+                  inner_count = max(length(state.ast) - marker, 0)
+                  {inner_reversed, outer_ast} = Enum.split(state.ast, inner_count)
+                  inner = Enum.reverse(inner_reversed)
 
-          do_parse(rest, state)
-        end
+                  state =
+                    %{
+                      state
+                      | ast: [{unquote(tag), block_attrs, inner} | outer_ast],
+                        bag: Map.put(state.bag, :outer, outer_rest)
+                    }
+                    |> listener({:tag, {unquote(md), unquote(tag)}, false})
+                    |> set_mode({:linefeed, 0})
 
-        defp do_parse(
-               <<x::utf8, rest::binary>>,
-               %Md.Parser.State{path: [unquote_splicing(closing_match) | _]} = state
-             ) do
-          do_parse(rest, push_char(state, escape_char(x)))
+                  do_parse(rest, state)
+
+                _ ->
+                  marker = length(state.ast)
+
+                  state =
+                    state
+                    |> listener({:tag, {unquote(md), unquote(tag)}, true})
+                    |> set_mode({:linefeed, 0})
+
+                  state = %{
+                    state
+                    | bag:
+                        Map.put(
+                          state.bag,
+                          :outer,
+                          [{unquote(tag), unquote(md), marker, unquote(attrs)} | outer]
+                        )
+                  }
+
+                  do_parse(rest, state)
+              end
+            end
+
+          _ ->
+            defp do_parse(<<unquote(md), rest::binary>>, state_linefeed()) do
+              state =
+                state
+                |> listener({:tag, {unquote(md), unquote(tag)}, true})
+                |> push_path(for tag <- unquote(tags), do: {tag, unquote(attrs), []})
+                |> set_mode(unquote(mode))
+
+              do_parse(rest, state)
+            end
+
+            defp do_parse(
+                   <<unquote(md), rest::binary>>,
+                   %Md.Parser.State{path: [unquote_splicing(closing_match) | _]} = state
+                 ) do
+              state =
+                state
+                |> rewind_state(pop: unquote(pop))
+                |> pop_mode(unquote(mode))
+                |> push_mode(:md)
+
+              do_parse(rest, state)
+            end
+
+            defp do_parse(
+                   <<x::utf8, rest::binary>>,
+                   %Md.Parser.State{path: [unquote_splicing(closing_match) | _]} = state
+                 ) do
+              do_parse(rest, push_char(state, escape_char(x)))
+            end
         end
       end)
 

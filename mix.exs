@@ -17,6 +17,7 @@ defmodule Md.MixProject do
       deps: deps(),
       aliases: aliases(),
       docs: docs(),
+      # test_ignore_filters: [&(&1 == "test/md/twitter_card_test.exs")],
       test_coverage: [tool: ExCoveralls],
       dialyzer: [
         plt_file: {:no_warn, ".dialyzer/plts/dialyzer.plt"},

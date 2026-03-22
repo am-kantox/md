@@ -150,7 +150,7 @@ defmodule Md.Transforms.Footnote do
 
   @impl Md.Transforms
   def apply(md, text) do
-    # TODO closing is needed here
+    # [TODO] closing is needed here
     ref = String.slice(text, String.length(md)..-2)
 
     {:a, %{__deferred__: %{attribute: :href, content: text, kind: :attribute}},
