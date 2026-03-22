@@ -700,22 +700,6 @@ defmodule Md.Engine do
           do_parse(input, state)
         end
 
-        defp do_parse(
-               input,
-               %Md.Parser.State{
-                 mode: [{:linefeed, 0} | _],
-                 path: [unquote_splicing(closing_match) | _]
-               } = state
-             ) do
-          state =
-            state
-            |> rewind_state(until: unquote(tag), inclusive: true)
-            |> pop_mode([{:linefeed, 0}, unquote(mode)])
-            |> push_mode({:linefeed, 0})
-
-          do_parse(input, state)
-        end
-
         defp do_parse(<<unquote(md), rest::binary>>, empty({:linefeed, 0})) do
           state =
             state
@@ -755,6 +739,29 @@ defmodule Md.Engine do
              )
              when mode == unquote(mode) do
           do_parse(rest, push_char(state, x))
+        end
+      end)
+
+      Enum.each(shifts, fn {md, properties} ->
+        [tag | _] = tags = List.wrap(properties[:tag])
+        mode = Map.get(properties, :mode, {:inner, :raw})
+
+        closing_match = Md.Engine.closing_match(tags, ctx)
+
+        defp do_parse(
+               input,
+               %Md.Parser.State{
+                 mode: [{:linefeed, 0} | _],
+                 path: [unquote_splicing(closing_match) | _]
+               } = state
+             ) do
+          state =
+            state
+            |> rewind_state(until: unquote(tag), inclusive: true)
+            |> pop_mode([{:linefeed, 0}, unquote(mode)])
+            |> push_mode({:linefeed, 0})
+
+          do_parse(input, state)
         end
       end)
     end

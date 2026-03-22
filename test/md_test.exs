@@ -301,6 +301,65 @@ defmodule MdTest do
            ] == Md.parse(input).ast
   end
 
+  test "codeblock with tabs as a leader" do
+    defmodule MyParserTab do
+      use Md.Parser
+
+      alias Md.Parser.Syntax.Void
+
+      @default_syntax Map.put(Void.syntax(), :settings, %{
+                        outer: :p,
+                        span: :span,
+                        linebreaks: [<<?\r, ?\n>>, <<?\n>>],
+                        empty_tags: ~w|img hr br|a,
+                        requiring_attributes_tags: ~w|a|a,
+                        linewrap: false
+                      })
+      @syntax @default_syntax
+              |> Map.merge(%{
+                # Mark indented text for later rendering
+                shift: [
+                  {"\t",
+                   %{
+                     tag: [:pre, :code],
+                     pop: %{code: [attribute: :class, prefixes: ["", "lang-"]]}
+                   }},
+                  {"  ",
+                   %{
+                     tag: [:pre, :code],
+                     pop: %{code: [attribute: :class, prefixes: ["", "lang-"]]}
+                   }}
+                ]
+              })
+    end
+
+    input = """
+    foo
+
+    \tdef test do
+    \t\ttrue
+    \tend
+
+    bar
+
+      def test do
+        true
+      end
+
+    baz
+    """
+
+    assert {"", md} = MyParserTab.parse(input)
+
+    assert [
+             {:p, nil, ["foo"]},
+             {:pre, nil, [{:code, nil, ["def test do", "\n\ttrue", "\nend"]}]},
+             {:p, nil, ["bar"]},
+             {:pre, nil, [{:code, nil, ["def test do", "\n  true", "\nend"]}]},
+             {:p, nil, ["baz"]}
+           ] == md.ast
+  end
+
   test "paragraph followed by a list" do
     assert [{:p, nil, ["text"]}, {:ol, nil, [{:li, nil, ["element"]}]}] =
              Md.parse("text\n\n1. element").ast
