@@ -222,6 +222,64 @@ defmodule MdTest do
              Md.parse(input).ast
   end
 
+  test "block inside a block" do
+    defmodule MyParserBlocks do
+      @moduledoc false
+
+      use Md.Parser
+
+      alias Md.Parser.Syntax.Default
+
+      @default_syntax Map.put(Default.syntax(), :settings, %{
+                        outer: :p,
+                        span: :span,
+                        linebreaks: [<<?\r, ?\n>>, <<?\n>>],
+                        empty_tags: ~w|img hr br|a,
+                        requiring_attributes_tags: ~w|a|a,
+                        linewrap: false
+                      })
+      @syntax @default_syntax
+              |> Map.merge(%{
+                block: [
+                  {":::",
+                   %{
+                     tag: [:div],
+                     mode: {:outer, :div}
+                   }}
+                ]
+              })
+    end
+
+    input = """
+      # MAIN Headline
+
+      :::
+
+      # DIV Headline
+
+      DIV paragraph 1
+
+      DIV paragraph 2
+
+      :::
+
+      MAIN paragraph
+    """
+
+    assert {"", md} = MyParserBlocks.parse(input)
+
+    assert [
+             {:h1, nil, ["MAIN Headline"]},
+             {:div, nil,
+              [
+                {:h1, nil, ["DIV Headline"]},
+                {:p, nil, ["DIV paragraph 1"]},
+                {:p, nil, ["DIV paragraph 2"]}
+              ]},
+             {:p, nil, ["MAIN paragraph"]}
+           ] == md.ast
+  end
+
   test "codeblock" do
     input = """
     foo
@@ -414,9 +472,13 @@ defmodule MdTest do
     """
 
     assert [
-      {:ul, nil, [
-        {:li, nil, [{:a, %{href: "https://example.com"}, ["https://example.com"]}, "\u00A0"]},
-        {:li, nil, ["Example dot com"]}]}] == Md.parse(input).ast
+             {:ul, nil,
+              [
+                {:li, nil,
+                 [{:a, %{href: "https://example.com"}, ["https://example.com"]}, "\u00A0"]},
+                {:li, nil, ["Example dot com"]}
+              ]}
+           ] == Md.parse(input).ast
   end
 
   test "blockquote" do
