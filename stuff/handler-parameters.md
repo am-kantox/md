@@ -158,9 +158,9 @@ block: [
 
 **Effect:**
 
-```elixir
-IO.puts("hello")
-```
+    ```elixir
+    IO.puts("hello")
+    ```
 
 produces `<pre><code class="elixir lang-elixir">IO.puts(&quot;hello&quot;)</code></pre>`.
 
