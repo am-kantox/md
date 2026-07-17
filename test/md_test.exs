@@ -368,6 +368,15 @@ defmodule MdTest do
              Md.parse("text\n1. element").ast
   end
 
+  test "list, blank line, paragraph, list item directly after (bug report)" do
+    assert [
+             {:ul, nil, [{:li, nil, ["a"]}]},
+             {:p, nil, ["phrase."]},
+             {:ul, nil, [{:li, nil, ["item"]}]}
+           ] ==
+             Md.parse("- a\n\nphrase.\n- item").ast
+  end
+
   test "nested list starting with a deep nest" do
     input = "test\n    - A\n  - B\n  - C\n"
 

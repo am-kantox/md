@@ -785,7 +785,7 @@ defmodule Md.Engine do
             |> rewind_state(trim: true)
             |> set_mode({:linefeed, 0})
 
-          do_parse(rest, state)
+          do_parse(rest, %{state | bag: %{state.bag | indent: []}})
         end
 
         defp do_parse(<<unquote(lb), rest::binary>>, state()) do
@@ -1503,9 +1503,13 @@ defmodule Md.Engine do
           |> push_char(x)
 
         state =
-          if mode in [:raw, {:inner, :raw}, :md],
-            do: state,
-            else: state |> pop_mode([:md]) |> push_mode(:md)
+          case mode do
+            :raw -> state
+            {:inner, :raw} -> state
+            :md -> state
+            {:linefeed, _} -> state |> pop_mode(mode) |> push_mode(:md)
+            _ -> state |> pop_mode([:md]) |> push_mode(:md)
+          end
 
         do_parse(rest, state)
       end
