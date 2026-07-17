@@ -140,24 +140,37 @@ defmodule Md.Engine do
         defp do_parse(unquote(md) <> rest, state()) when mode not in [:raw, {:inner, :raw}] do
           state =
             %{state | bag: %{state.bag | stock: [""]}}
-            |> push_mode(:comment)
+            |> push_mode({:comment, unquote(md)})
 
           do_parse(rest, state)
         end
 
-        defp do_parse(unquote(closing) <> rest, state()) when mode == :comment do
+        defp do_parse(unquote(closing) <> rest, state()) when mode == {:comment, unquote(md)} do
           state =
             state
             |> listener({:comment, state.bag.stock})
-            |> pop_mode(:comment)
+            |> pop_mode({:comment, unquote(md)})
 
           do_parse(rest, %{state | bag: %{state.bag | stock: []}})
         end
 
-        defp do_parse(<<x::utf8, rest::binary>>, state()) when mode == :comment do
+        defp do_parse(<<x::utf8, rest::binary>>, state()) when mode == {:comment, unquote(md)} do
           [stock] = state.bag.stock
           state = %{state | bag: %{state.bag | stock: [stock <> <<x::utf8>>]}}
           do_parse(rest, state)
+        end
+
+        defp do_parse("", %Md.Parser.State{mode: [{:comment, unquote(md)} | _]} = state) do
+          [stock] = state.bag.stock
+
+          state =
+            state
+            |> pop_mode({:comment, unquote(md)})
+            |> push_char(unquote(md))
+            |> then(fn s -> if stock != "", do: push_char(s, stock), else: s end)
+            |> Map.update!(:bag, &Map.put(&1, :stock, []))
+
+          do_parse("", state)
         end
       end)
     end
@@ -433,6 +446,19 @@ defmodule Md.Engine do
           do_parse(rest, state)
         end
       end)
+
+      defp do_parse("", state(:magnet)) do
+        [stock, md] = state.bag.stock
+
+        state =
+          state
+          |> pop_mode(:magnet)
+          |> push_char(md)
+          |> then(fn s -> if stock != "", do: push_char(s, stock), else: s end)
+          |> Map.update!(:bag, &Map.put(&1, :stock, []))
+
+        do_parse("", state)
+      end
 
       defp do_parse(<<x::utf8, rest::binary>>, state(:magnet)) do
         [stock, md] = state.bag.stock

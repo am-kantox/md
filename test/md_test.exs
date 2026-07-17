@@ -973,4 +973,31 @@ defmodule MdTest do
              ]
            }
   end
+
+  test "magnet opener at the end of input" do
+    defmodule MagnetTransform do
+      def apply(_md, text), do: {:span, %{}, [text]}
+    end
+
+    defmodule MagnetOnlyParser do
+      use Md.Parser
+
+      @syntax %{
+        magnet: [
+          {":", %{transform: &MagnetTransform.apply/2}}
+        ]
+      }
+    end
+
+    assert "<p>text ending with :</p>" ==
+             Md.Parser.generate("text ending with :", parser: MagnetOnlyParser, format: :none)
+  end
+
+  test "unclosed comment" do
+    assert "<p>text <!-- comment</p>" ==
+             Md.Parser.generate("text <!-- comment", format: :none)
+  end
 end
+
+
+

@@ -17,6 +17,7 @@ defmodule Md.Listener do
           | :raw
           | :skip
           | :comment
+          | {:comment, binary()}
           | :magnet
           | :md
           | {:outer, :md}
