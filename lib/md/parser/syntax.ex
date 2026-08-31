@@ -112,6 +112,13 @@ defmodule Md.Parser.Syntax do
   def merge(custom, default \\ Map.put(Default.syntax(), :settings, Default.settings())) do
     default
     |> Map.merge(custom, fn
+      # `:settings` is a plain `atom => term` map (see `t:settings/0`), not a
+      # list of `{prefix_string, properties}` items like every other syntax
+      # category -- it must stay a map through the merge, or the sort-by-prefix
+      # step below (which assumes a `String.length/1`-able key) crashes on it.
+      :settings, v1, v2 ->
+        [v2, v1] |> Enum.map(&Map.new/1) |> Enum.reduce(&Map.merge/2)
+
       _k, v1, v2 ->
         [v2, v1] |> Enum.map(&Map.new/1) |> Enum.reduce(&Map.merge/2) |> Map.to_list()
     end)

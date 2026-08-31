@@ -77,6 +77,11 @@ and its handling rules. Here is the excerpt from the default parser for `brace`s
   }
 ```
 
+A `block:` entry HTML-entity-escapes (`'`, `"`, `&`, `<`, `>`) its captured
+content by default, same as `` ``` `` fenced code; set `escape: false` on a
+specific entry to carry its content through verbatim instead (useful for a
+custom block whose content isn't meant to become HTML).
+
 For more examples of what properties are allowed for each kind of handlers,
 see the sources (ATM.)
 
@@ -142,6 +147,9 @@ Instead of `@syntax` module attribute, one might use
 
 ### Changelog
 
+- **`0.12.2`** fix `Md.Parser.Syntax.merge/2` crashing when a custom `:settings`
+  map is supplied; add an opt-out `escape: false` property for `block:` entries
+  to carry content through verbatim instead of HTML-entity-escaping it
 - **`0.10.4`** fix pairs with special symbols inside
 - **`0.10.2`** spaces as delimiters in attributes
 - **`0.10.1`** support for the flaky `floki` update

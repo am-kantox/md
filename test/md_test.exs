@@ -998,6 +998,3 @@ defmodule MdTest do
              Md.Parser.generate("text <!-- comment", format: :none)
   end
 end
-
-
-

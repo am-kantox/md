@@ -579,6 +579,7 @@ defmodule Md.Engine do
         mode = Map.get(properties, :mode, :raw)
         attrs = Macro.escape(properties[:attributes])
         pop = Macro.escape(properties[:pop])
+        escape? = Map.get(properties, :escape, true)
 
         closing_match = Md.Engine.closing_match(tags, ctx)
 
@@ -656,7 +657,8 @@ defmodule Md.Engine do
                    <<x::utf8, rest::binary>>,
                    %Md.Parser.State{path: [unquote_splicing(closing_match) | _]} = state
                  ) do
-              do_parse(rest, push_char(state, escape_char(x)))
+              char = if unquote(escape?), do: escape_char(x), else: x
+              do_parse(rest, push_char(state, char))
             end
         end
       end)
