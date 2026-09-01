@@ -36,3 +36,6 @@ bench/snapshots/
 /.tool-versions
 
 /.erl.history/
+
+/.ragex/
+/.dsh/
