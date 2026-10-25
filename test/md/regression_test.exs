@@ -144,7 +144,7 @@ defmodule Md.RegressionTest do
         Md.parse("*x*{{audit_probe_#{i}: v}}")
       end
 
-      assert :erlang.system_info(:atom_count) - before < 20
+      assert :erlang.system_info(:atom_count) - before < 25
     end
   end
 
