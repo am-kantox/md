@@ -242,8 +242,6 @@ defmodule Md.Attributes do
   defp allowed?(key, list) when is_list(list),
     do: key in list or Atom.to_string(key) in list
 
-  defp allowed?(_key, _policy), do: false
-
   @doc """
   `true` when `value` may be used as the value of the URI attribute `key`.
 

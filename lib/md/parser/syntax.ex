@@ -120,9 +120,17 @@ defmodule Md.Parser.Syntax do
 
   `:settings` is a plain `atom => term` map rather than a list of
   `{marker, properties}` items, so it is merged as a map and left as one.
+
+  When `default` is omitted, `Md.Parser.Syntax.Default` is used. That default
+  is resolved lazily: `Default` builds itself by calling `merge/2`, so reading
+  it in the *head* of this function would be a compile-time cycle.
   """
+  @spec merge(t()) :: t()
+  def merge(custom), do: merge(custom, default_syntax())
+
+  @doc false
   @spec merge(t(), t()) :: t()
-  def merge(custom, default \\ Map.put(Default.syntax(), :settings, Default.settings())) do
+  def merge(custom, default) do
     default
     |> Map.merge(custom, fn
       # `:settings` is a plain `atom => term` map (see `t:settings/0`), not a
@@ -144,4 +152,7 @@ defmodule Md.Parser.Syntax do
     end)
     |> Map.new()
   end
+
+  @spec default_syntax() :: t()
+  defp default_syntax, do: Map.put(Default.syntax(), :settings, Default.settings())
 end

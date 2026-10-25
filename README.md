@@ -38,6 +38,34 @@ But if one wants to easily extend syntax almost without limits, `Md` might be go
 - **Attribute names never grow the atom table.** Names are resolved against a
   fixed lookup table, so a hostile document cannot exhaust the VM's atom table.
 
+### When the parser gets stuck
+
+The clause set is generated from the syntax map, so it is *closed*: every input
+the parser can reach is covered by some declaration. If an input ever falls
+through to the catch-all clause, that is a gap in the syntax definition (or a
+bug in the engine), not merely an odd document.
+
+Rather than a bare `FunctionClauseError`, `Md` logs the full context at `:error`
+level and raises `Md.Parser.Error` carrying the same information:
+
+```
+Md: no `do_parse/2` clause matches this input.
+
+  parser:       MyApp.Parser
+  continuation: "<aside>hello"
+  bytes left:   12
+  mode:         [linefeed: 0]
+  path:         [{:p, nil, []}]
+  bag:          %{indent: [], stock: [], deferred: []}
+
+  hint:         mode {:linefeed, 0} is open; the next bytes are "<aside>hello"
+```
+
+The `mode` is the most useful field: it names the construct whose clause is
+missing. The exception exposes `continuation`, `mode`, `path`, `bag`, `parser`
+and `hint` as struct fields, so a test or a crash reporter can assert on them
+instead of parsing a message.
+
 ### Markup Handling
 
 There are several different syntax patterns recognizable by `Md`. Those are:

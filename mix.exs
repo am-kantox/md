@@ -21,7 +21,9 @@ defmodule Md.MixProject do
       test_coverage: [tool: ExCoveralls],
       dialyzer: [
         plt_file: {:no_warn, ".dialyzer/plts/dialyzer.plt"},
-        plt_add_apps: [:floki],
+        # `:mix` is needed for `lib/mix/tasks/md.render.ex`; `:floki` is an
+        # optional dependency that `Md.Transforms.Anchor` compiles against.
+        plt_add_apps: [:floki, :mix],
         ignore_warnings: ".dialyzer/ignore.exs"
       ]
     ]
@@ -117,7 +119,15 @@ defmodule Md.MixProject do
           Md.Parser.Default,
           Md.Parser.State,
           Md.Parser.Syntax,
-          Md.Parser.Syntax.Void
+          Md.Parser.Syntax.Void,
+          Md.Parser.Error,
+          Md.Deferred,
+          Md.Attributes
+        ],
+        Listeners: [
+          Md.Listener,
+          Md.Listener.Sanitizer,
+          Md.Listener.Debug
         ],
         "Custom Transforms": [
           Md.Transforms.Anchor,

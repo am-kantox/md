@@ -66,7 +66,6 @@ defmodule Md.Engine do
         |> Enum.reverse()
         |> Enum.reduce(&Md.Parser.Syntax.merge/2)
         |> Map.put_new(:settings, Md.Parser.Syntax.Void.settings())
-        |> Map.to_list()
 
       Module.delete_attribute(__MODULE__, :syntax)
       Module.register_attribute(__MODULE__, :final_syntax, accumulate: false)
@@ -1890,6 +1889,16 @@ defmodule Md.Engine do
         }
 
         listener(state, :end)
+      end
+
+      # The clause set above is generated from the syntax map, so it is
+      # *closed*: reaching this clause means the syntax definition does not
+      # cover the input, not that the input is merely unusual. Report the whole
+      # context before failing, so the gap can be identified from the log
+      # alone -- a bare `FunctionClauseError` says only that *something* did
+      # not match.
+      defp do_parse(continuation, %Md.Parser.State{} = state) do
+        Md.Parser.Error.raise!(continuation, state, __MODULE__)
       end
     end
   end

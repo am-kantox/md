@@ -24,6 +24,8 @@ defmodule Md.Parser.Syntax.Default do
     do: Void.settings() |> Map.put(:disclosure_range, @disclosure_range)
 
   @impl Syntax
+  @doc "The default syntax definition."
+  @spec syntax() :: Syntax.t()
   def syntax do
     %{
       custom: [
@@ -167,13 +169,7 @@ defmodule Md.Parser.Syntax.Default do
         # nested
         {">", %{tag: [:blockquote, :p]}}
       ],
-      list:
-        [
-          {"- ", %{tag: :li, outer: :ul}},
-          {"* ", %{tag: :li, outer: :ul}},
-          {"• ", %{tag: :li, outer: :ul}},
-          {"+ ", %{tag: :li, outer: :ul}}
-        ] ++ Enum.map(0..@ol_max, &{"#{&1}. ", %{tag: :li, outer: :ol}}),
+      list: list_syntax(),
       brace: [
         {"*", %{tag: :b}},
         {"_", %{tag: :i}},
@@ -197,5 +193,20 @@ defmodule Md.Parser.Syntax.Default do
         {"dd", %{}}
       ]
     }
+  end
+
+  # Built by a comprehension, so it is given an explicit type: without one
+  # Dialyzer infers `[any()]` for the `:list` category, which does not match
+  # `t:Syntax.t/0` and makes every `merge/2` call look ill-typed.
+  @spec list_syntax() :: [Syntax.item()]
+  defp list_syntax do
+    bullets = [{"- ", %{tag: :li, outer: :ul}}, {"* ", %{tag: :li, outer: :ul}}]
+
+    bullets ++
+      [
+        {"• ", %{tag: :li, outer: :ul}},
+        {"+ ", %{tag: :li, outer: :ul}}
+      ] ++
+      Enum.map(0..@ol_max, fn n -> {"#{n}. ", %{tag: :li, outer: :ol}} end)
   end
 end

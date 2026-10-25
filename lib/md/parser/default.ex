@@ -24,6 +24,13 @@ defmodule Md.Parser.Default do
   use Md.Parser
 
   alias Md.Parser.Syntax
+  alias Md.Parser.Syntax.Default, as: DefaultSyntax
 
-  @syntax Syntax.merge(Application.compile_env(:md, :syntax, %{}))
+  # `Syntax.merge/1`'s default base *is* this module's syntax, so calling it
+  # here would be a cycle. Passing the base explicitly keeps the dependency
+  # one-directional: `Default` depends on `Syntax.Default`, never the reverse.
+  @syntax Syntax.merge(
+            Application.compile_env(:md, :syntax, %{}),
+            Map.put(DefaultSyntax.syntax(), :settings, DefaultSyntax.settings())
+          )
 end

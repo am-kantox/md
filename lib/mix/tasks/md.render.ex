@@ -30,6 +30,7 @@ defmodule Mix.Tasks.Md.Render do
   @aliases [o: :output, p: :parser]
 
   @impl Mix.Task
+  @spec run([String.t()]) :: :ok
   def run(argv) do
     {options, args} = OptionParser.parse!(argv, strict: @switches, aliases: @aliases)
 
@@ -39,8 +40,13 @@ defmodule Mix.Tasks.Md.Render do
       |> render(options)
 
     case Keyword.get(options, :output) do
-      nil -> Mix.shell().info(html)
-      path -> File.write!(path, html)
+      nil ->
+        Mix.shell().info(html)
+        :ok
+
+      path ->
+        File.write!(path, html)
+        :ok
     end
   end
 

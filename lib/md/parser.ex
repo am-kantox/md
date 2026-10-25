@@ -90,7 +90,8 @@ defmodule Md.Parser do
   otherwise it returns a tuple `{XML, accumulator}` where `accumulator` is what
   has been returned from the underlying calls to `XmlBuilder.traverse/4`.
   """
-  @spec generate(binary() | L.state(), options()) :: binary() | {binary(), any()}
+  @spec generate(binary() | L.state(), options() | module()) ::
+          binary() | {binary(), any()}
   def generate(input, options \\ [])
 
   def generate(input, options) when is_binary(input) and is_list(options) do

@@ -48,9 +48,11 @@ defmodule Md.Listener do
           listener: nil | module(),
           payload: any(),
           bag: %{
-            indent: [non_neg_integer()],
+            indent: [non_neg_integer() | atom()],
             stock: [branch()],
-            deferred: [binary()]
+            # Labels registered by `disclosure` declarations, as
+            # `{label, content}` pairs (see `Md.Deferred`).
+            deferred: [{binary(), binary()}]
           }
         }
 

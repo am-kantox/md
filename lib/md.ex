@@ -9,7 +9,11 @@ defmodule Md do
   #{@mdoc}
   """
 
-  @behaviour Md.Parser
+  # `Md` is a convenience wrapper around a parser module, not a parser itself:
+  # it returns the state alone, while the behaviour's `parse/2` callback
+  # returns `{remainder, state}`. Claiming the behaviour here made Dialyzer
+  # report a `callback_spec_type_mismatch` and, worse, implied that `Md` could
+  # be passed wherever a parser module is expected.
 
   alias Md.Listener, as: L
   alias Md.Parser.State, as: State
@@ -25,6 +29,12 @@ defmodule Md do
   Md.parse("some _text_", Md.with(MyParser))
   ```
 
+  Note that this is a *convenience wrapper*, not an implementation of the
+  `Md.Parser` behaviour: the behaviour's `c:parse/2` callback returns
+  `{remainder, state}`, while this returns the state alone (the remainder is
+  always empty once a document has been consumed). Implement the behaviour on
+  a parser module, and call this to use it.
+
   ## Examples
 
       iex> Md.parse("   foo")
@@ -37,7 +47,6 @@ defmodule Md do
       "<p>It’s all <b>bold</b> and <i>italic</i>!</p>"
 
   """
-  @impl Md.Parser
   @spec parse(binary(), L.state()) :: L.state()
   def parse(input, state \\ %State{}) do
     {_rest, state} = state.type.parse(input, state)

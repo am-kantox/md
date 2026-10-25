@@ -54,9 +54,13 @@ defmodule Md.Listener.Sanitizer do
   @doc """
   Sanitises an AST, returning a new one.
 
+  Always returns a list of nodes: a single unwrapped element is accepted for
+  convenience, and an element that is removed contributes its children (which
+  may be zero nodes).
+
   `options` accepts `:allowed_tags` and `:allowed_attributes`.
   """
-  @spec sanitize(Md.Listener.branch(), map()) :: Md.Listener.branch()
+  @spec sanitize(Md.Listener.branch(), map()) :: [Md.Listener.branch()]
   def sanitize(ast, options \\ %{}) do
     allowed_tags = Map.get(options, :allowed_tags, @allowed_tags)
     allowed_attributes = Map.get(options, :allowed_attributes)
