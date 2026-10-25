@@ -16,14 +16,20 @@ defmodule Md.Parser.DSL do
   Enum.each(Syntax.settings(), fn type ->
     defmacro unquote(type)(setting) do
       quote bind_quoted: [type: unquote(type), setting: setting] do
-        @syntax %{
-          settings:
-            Map.put(
-              Enum.find(@syntax, Md.Parser.Syntax.Void.settings(), &match?(%{settings: _}, &1)),
-              type,
-              setting
-            )
-        }
+        # `@syntax` is an accumulating attribute, so each declaration appends a
+        # one-key map. The settings declarations must therefore read the
+        # *current* settings map back out of the accumulated list and merge the
+        # new key into it -- `Enum.find/3` would return the matching `{key,
+        # value}` tuple, which is how the settings map ended up nested inside
+        # itself under a `:settings` key.
+        current =
+          @syntax
+          |> Enum.find_value(Md.Parser.Syntax.Void.settings(), fn
+            %{settings: settings} when is_map(settings) -> settings
+            _ -> nil
+          end)
+
+        @syntax %{settings: Map.put(current, type, setting)}
       end
     end
   end)

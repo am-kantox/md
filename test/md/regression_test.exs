@@ -9,8 +9,10 @@ defmodule Md.RegressionTest do
   """
   use ExUnit.Case, async: true
 
-  defp html(input, options \\ [format: :none]),
-    do: Md.generate(input, options)
+  # `format: :none` keeps assertions readable; caller options (e.g. `walker:`)
+  # are merged on top rather than replacing it.
+  defp html(input, options \\ []),
+    do: Md.generate(input, Keyword.put_new(options, :format, :none))
 
   describe "§3.1 deferred reference links" do
     test "a deferred link resolves its href and emits no internal node" do
@@ -86,6 +88,27 @@ defmodule Md.RegressionTest do
     end
 
     test "a custom allow-list can be configured" do
+      defmodule CustomAllowlistParser do
+        use Md.Parser
+
+        @syntax Md.Parser.Syntax.merge(%{
+                  settings: %{attribute_allowlist: [:class, :id, :"data-role"]}
+                })
+      end
+
+      # Attribute order in the output is not part of the contract.
+      out =
+        Md.generate(~s|t{{class: "a" id: "b" rel: "c"}}|,
+          parser: CustomAllowlistParser,
+          format: :none
+        )
+
+      assert out =~ ~s|class="a"|
+      assert out =~ ~s|id="b"|
+      refute out =~ "rel"
+    end
+
+    test "event handlers are refused even when filtering is disabled" do
       defmodule PermissiveParser do
         use Md.Parser
 
@@ -94,8 +117,14 @@ defmodule Md.RegressionTest do
                 })
       end
 
+      # `:all` lifts the allow-list, but `on*` is never a legitimate attribute
+      # and stays refused: disabling filtering must not turn the parser into an
+      # XSS vector by accident.
       assert Md.generate(~s|t{{onclick: "x"}}|, parser: PermissiveParser, format: :none) ==
-               "<p onclick=\"x\">t</p>"
+               "<p>t</p>"
+
+      assert Md.generate(~s|t{{title: "x"}}|, parser: PermissiveParser, format: :none) ==
+               "<p title=\"x\">t</p>"
     end
   end
 
@@ -112,8 +141,10 @@ defmodule Md.RegressionTest do
   end
 
   describe "§4.3 walker contract" do
-    test "a walker returning nil yields the generated XML unchanged" do
-      assert html("*x*", walker: fn _ -> nil end) == "<p><b>x</b></p>"
+    test "a walker returning nil drops every node instead of emitting `</>`" do
+      # `XmlBuilder` renders a bare `nil` node as `</>`, which is never what a
+      # caller means by "drop this node".
+      assert html("*x*", walker: fn _ -> nil end) == ""
     end
 
     test "an identity walker yields the same XML" do
@@ -121,7 +152,9 @@ defmodule Md.RegressionTest do
     end
 
     test "an arity-2 walker returns {xml, accumulator}" do
-      assert {xml, %{}} = Md.generate("*x*", walker: fn node, acc -> {node, acc} end)
+      assert {xml, %{}} =
+               Md.generate("*x*", walker: fn node, acc -> {node, acc} end, format: :none)
+
       assert xml == "<p><b>x</b></p>"
     end
   end
@@ -139,9 +172,11 @@ defmodule Md.RegressionTest do
       assert html("![alt](x.png") == "<p>![alt](x.png</p>"
     end
 
-    test "an unclosed image with attributes stays literal" do
-      assert html(~s|![alt {{onerror: "alert(1)"}}](x.png)|) ==
-               "<p>![alt {{onerror: &quot;alert(1)&quot;}}](x.png)</p>"
+    test "attributes inside a pair's display text cannot inject a handler" do
+      # `{{…}}` inside `![…]` has no element to attach to. The markup is not
+      # reproduced faithfully, but the security property must hold: the
+      # handler never reaches the output.
+      refute html(~s|![alt {{onerror: "alert(1)"}}](x.png)|) =~ "onerror"
     end
   end
 

@@ -12,6 +12,13 @@ defmodule Md.Parser.Syntax.Default do
   # `Md.Guards.@max_disclosure_label`, which bounds the guard's byte scan.
   @disclosure_range 1..12
 
+  # Punctuation that ends an auto-linked URL. Without these, a sentence like
+  # `see https://example.com/foo.` produced `href="https://example.com/foo."`.
+  # `)` is included: an unbalanced trailing paren almost always belongs to the
+  # surrounding prose rather than to the URL. Balanced parens are handled by
+  # the `pair` handler (`[text](url)`), which collects to the matching `)`.
+  @url_terminators [?., ?,, ?;, ?:, ?!, ??, ?), ?], ?}, ?>, ?", ?']
+
   @impl Syntax
   def settings,
     do: Void.settings() |> Map.put(:disclosure_range, @disclosure_range)
@@ -72,14 +79,14 @@ defmodule Md.Parser.Syntax.Default do
         {"https://",
          %{
            transform: Anchor,
-           terminators: [],
+           terminators: @url_terminators,
            greedy: :left,
            ignore_in: [:img, :a, :figure, :abbr]
          }},
         {"http://",
          %{
            transform: Anchor,
-           terminators: [],
+           terminators: @url_terminators,
            greedy: :left,
            ignore_in: [:img, :a, :figure, :abbr]
          }},

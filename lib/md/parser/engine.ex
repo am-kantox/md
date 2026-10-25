@@ -1045,7 +1045,8 @@ defmodule Md.Engine do
              when mode not in [{:inner, :raw}] do
           # `content` is the display text collected so far, in reverse order.
           # It moves to `stock` while the metadata segment is gathered in
-          # `:raw` mode.
+          # `:raw` mode. `bag.indent` is repurposed as the nesting depth of the
+          # metadata segment, so `[a](url(f))` closes at the *matching* paren.
           state =
             state
             |> pop_mode(unquote(inner_mode))
@@ -1053,7 +1054,12 @@ defmodule Md.Engine do
 
           do_parse(rest, %{
             state
-            | bag: %{state.bag | stock: content},
+            | bag: %{
+                state.bag
+                | stock: content,
+                  indent: [0],
+                  deferred: [{unquote(md), unquote(closing) <> unquote(inner_opening)}]
+              },
               path: [{unquote(tag), attrs, []} | path_tail]
           })
         end
@@ -1087,6 +1093,47 @@ defmodule Md.Engine do
                 path: [{unquote(tag), attrs, []} | path_tail]
             })
           end
+        end
+
+        # An `inner_opening` inside the metadata segment opens a nested group:
+        # `[a](url(f))` must not close at the first `)`. The nesting depth
+        # lives in `bag.indent`, which is otherwise unused while a pair is open.
+        defp do_parse(
+               <<unquote(inner_opening), rest::binary>>,
+               %Md.Parser.State{
+                 mode: [:raw | _],
+                 bag: %{indent: [depth | _] = indent},
+                 path: [{unquote(tag), _, _} | _]
+               } = state
+             )
+             when is_integer(depth) do
+          state =
+            push_char(
+              %{state | bag: %{state.bag | indent: [depth + 1 | indent]}},
+              unquote(inner_opening)
+            )
+
+          do_parse(rest, state)
+        end
+
+        # A closing marker at depth > 0 closes a nested group rather than the
+        # pair itself.
+        defp do_parse(
+               <<unquote(inner_closing), rest::binary>>,
+               %Md.Parser.State{
+                 mode: [:raw | _],
+                 bag: %{indent: [depth | indent]},
+                 path: [{unquote(tag), _, _} | _]
+               } = state
+             )
+             when is_integer(depth) and depth > 0 do
+          state =
+            push_char(
+              %{state | bag: %{state.bag | indent: [depth - 1 | indent]}},
+              unquote(inner_closing)
+            )
+
+          do_parse(rest, state)
         end
 
         # The metadata segment is only closed once it has been *opened*: the
@@ -1616,7 +1663,16 @@ defmodule Md.Engine do
                 # arbitrary HTML attributes (notably `on*` handlers).
                 set = Md.Attributes.parse(grabbed, @attribute_allowlist)
 
-                %{state | path: [{tag, Map.merge(attrs || %{}, set), collected} | t]}
+                # When nothing survives filtering -- an `on*` handler, or a
+                # `{{…}}` that appeared while a `pair` was still collecting its
+                # display text -- the element is left exactly as it was, so the
+                # pair can go on to close normally.
+                attrs =
+                  if set == %{} and is_nil(attrs),
+                    do: nil,
+                    else: Map.merge(attrs || %{}, set)
+
+                %{state | path: [{tag, attrs, collected} | t]}
 
               _ ->
                 state
@@ -1626,13 +1682,24 @@ defmodule Md.Engine do
           do_parse(rest, state)
         end
 
+        # Inline attributes attach to the element that precedes them. While a
+        # `pair` is still collecting its display text there is no such element
+        # yet -- the path head is the half-built pair -- so `{{…}}` must be
+        # left alone and handled as ordinary text.
+        # Inline attributes attach to the element that precedes them. While a
+        # `pair` is still collecting its display text the path head is the
+        # half-built pair with an empty content list and no attributes yet;
+        # there is no element to attach to, so `{{…}}` is left as plain text.
         defp do_parse(
                <<unquote(md), rest::binary>>,
-               %Md.Parser.State{mode: [mode | _], path: [{tag, attrs, content} | t]} = state
+               %Md.Parser.State{
+                 mode: [mode | _],
+                 path: [{tag, attrs, [_ | _] = content} | t]
+               } = state
              )
              when mode not in [:raw, {:inner, :raw}] do
           state =
-            %{state | path: [{tag, attrs || %{}, ["" | content || []]} | t]}
+            %{state | path: [{tag, attrs || %{}, ["" | content]} | t]}
             # |> listener({:attribute, {unquote(md), unquote(tag)}, true})
             |> push_mode(unquote(mode))
 
@@ -1679,6 +1746,56 @@ defmodule Md.Engine do
     quote generated: true,
           location: :keep,
           context: __CALLER__.module do
+      # An unterminated pair (`![alt](x.png`, `[foo](bar`) must not be rendered
+      # as a half-built element. By the time the input is exhausted the display
+      # text sits in `bag.stock` and the metadata segment in the path, so the
+      # generic rewind below would glue them together in the wrong order and
+      # emit `<img>x.pngalt</img>`. Rolling the pair back to its literal source
+      # text is both correct and what a reader expects.
+      defp do_parse(
+             "",
+             %Md.Parser.State{
+               mode: [:raw | _],
+               bag: %{stock: [_ | _] = outer_content, deferred: [src | _]},
+               path: [{tag, _attrs, [metadata]} | path_tail]
+             } = state
+           )
+           when is_atom(tag) do
+        # `src` holds the opening marker and both delimiters (`![` + `]` + `(`),
+        # `outer_content` the display text and `metadata` the second segment.
+        # The display text sits *between* the delimiters, so it is spliced in
+        # after the first two characters of `src`.
+        {opening, delimiters} = src
+        literal = opening <> Enum.join(outer_content, "") <> delimiters <> metadata
+
+        state =
+          %{state | path: path_tail, bag: %{state.bag | stock: [], indent: [], deferred: []}}
+          |> push_char(literal)
+
+        do_parse("", state)
+      end
+
+      # The same rollback for an unterminated *reference* (`[foo][bar`): the
+      # display text is in `bag.stock` and the unresolved label in the path.
+      defp do_parse(
+             "",
+             %Md.Parser.State{
+               mode: [mode | _],
+               bag: %{stock: [_ | _] = outer_content},
+               path: [{tag, _attrs, [label]} | path_tail]
+             } = state
+           )
+           when is_atom(tag) and mode not in [:raw, {:inner, :raw}] do
+        # `label` already carries its closing bracket.
+        literal = "[" <> Enum.join(outer_content, "") <> "][" <> label
+
+        state =
+          %{state | path: path_tail, bag: %{state.bag | stock: [], indent: [], deferred: []}}
+          |> push_char(literal)
+
+        do_parse("", state)
+      end
+
       defp do_parse("", %Md.Parser.State{bag: %{stock: [last | rest]}} = state) do
         do_parse(last, %{state | bag: %{state.bag | stock: rest}})
       end
@@ -1689,6 +1806,7 @@ defmodule Md.Engine do
           |> listener(:finalize)
           |> rewind_state(trim: true)
           |> apply_deferreds()
+          |> drop_blank_document()
 
         state = %{
           state
@@ -1844,6 +1962,13 @@ defmodule Md.Engine do
 
   defmacro helpers do
     quote generated: true, location: :keep, bind_quoted: [] do
+      # A document consisting only of whitespace produces a single `<br>` from
+      # the trailing-spaces `flush` rule. That is noise, not content.
+      @spec drop_blank_document(Md.Listener.state()) :: Md.Listener.state()
+      defp drop_blank_document(%Md.Parser.State{ast: ast} = state) do
+        if Enum.all?(ast, &match?({:br, _, _}, &1)), do: %{state | ast: []}, else: state
+      end
+
       @spec maybe_flip_flop(String.t(), Md.Listener.state()) :: {String.t(), Md.Listener.state()}
       defp maybe_flip_flop(rest, state), do: maybe_flip_flop(rest, state, rest)
 
@@ -2037,7 +2162,7 @@ defmodule Md.Engine do
       defp maybe_hide({tag, nil, content}) when tag in @requiring_attributes_tags,
         do: {nest(:span), %{class: "empty-anchor"}, content}
 
-      defp maybe_hide({tag, attrs, []}),
+      defp maybe_hide({tag, attrs, []}) when is_map(attrs) or is_nil(attrs),
         do: {tag, Map.put(attrs || %{}, :class, "empty-tag"), []}
 
       defp maybe_hide({_tag, _attrs, _branch} = trace), do: trace
