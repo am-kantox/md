@@ -7,6 +7,46 @@ defmodule Md.Engine do
     Enum.reduce(tags, [], &[{:{}, [], [&1, us, us]} | &2])
   end
 
+  @doc false
+  # Leading, trailing and interstitial blank nodes are artefacts of the
+  # trailing-spaces and line-break rules, not content: `"  \n  x"` must not
+  # start with a stray `<br/>`, and a whitespace-only document must render to
+  # nothing. `outer` is the configured outer container tag.
+  @spec drop_blanks([Md.Listener.branch()], atom()) :: [Md.Listener.branch()]
+  def drop_blanks(ast, outer) do
+    ast
+    |> Enum.drop_while(&blank_node?(&1, outer))
+    |> Enum.reverse()
+    |> Enum.drop_while(&blank_node?(&1, outer))
+    |> Enum.reverse()
+    |> Enum.reject(&blank_node?(&1, outer))
+  end
+
+  @doc false
+  # Renders an AST fragment back to text, dropping any element that was
+  # already built. Used only when rolling an unterminated pair back to its
+  # literal source, where the display text may already contain elements.
+  @spec flatten([Md.Listener.branch()]) :: binary()
+  def flatten(nodes) when is_list(nodes), do: Enum.map_join(nodes, &flatten/1)
+  def flatten(text) when is_binary(text), do: text
+  def flatten({_, _, content}) when is_list(content), do: flatten(content)
+  def flatten(_node), do: ""
+
+  @doc false
+  @spec blank_node?(Md.Listener.branch(), atom()) :: boolean()
+  def blank_node?({:br, _, _}, _outer), do: true
+
+  # An outer paragraph, or an indented-code block (`class: "pre"`), holding
+  # nothing but whitespace is not content: `"    \n"` is whitespace, not a code
+  # sample.
+  def blank_node?({tag, attrs, content}, outer) when is_list(content) do
+    (tag == outer or (is_map(attrs) and attrs[:class] in ["pre", "empty-tag"])) and
+      Enum.all?(content, &blank_node?(&1, outer))
+  end
+
+  def blank_node?(text, _outer) when is_binary(text), do: String.trim(text) == ""
+  def blank_node?(_node, _outer), do: false
+
   defmacro __before_compile__(env) do
     env.module
     |> Module.get_attribute(:syntax)
@@ -1338,6 +1378,12 @@ defmodule Md.Engine do
 
             :md ->
               do_parse(rest, push_char(state, unquote(md)))
+
+            # A different heading level is already open (`#` inside a `##`
+            # paragraph): the marker is literal text here. Without this clause
+            # the `case` raised `CaseClauseError` on input such as `"#>>"`.
+            _ ->
+              do_parse(rest, push_char(state, unquote(md)))
           end
         end
 
@@ -1384,6 +1430,12 @@ defmodule Md.Engine do
                 |> push_path(for tag <- unquote(tags), do: {tag, unquote(attrs), []})
 
               do_parse(rest, state)
+
+            # Any other mode (a `pair` or `magnet` left open, for instance):
+            # the marker is literal text here. Without this clause the `case`
+            # raised `CaseClauseError` on input such as `"[^    [\n>"`.
+            _ ->
+              do_parse(rest, push_char(state, unquote(md)))
           end
         end
       end)
@@ -1654,6 +1706,13 @@ defmodule Md.Engine do
              when mode == unquote(mode) do
           state =
             case h do
+              # `grabbed` is the path content with the attribute text pushed on
+              # top. It can be empty -- `{{` opened on an element that had no
+              # content yet, or a `}}` with no matching `{{` -- and destructuring
+              # it unconditionally crashed with a `MatchError`.
+              {tag, attrs, []} ->
+                %{state | path: [{tag, attrs, []} | t]}
+
               {tag, attrs, grabbed} ->
                 [grabbed | collected] = grabbed
 
@@ -1760,13 +1819,13 @@ defmodule Md.Engine do
                path: [{tag, _attrs, [metadata]} | path_tail]
              } = state
            )
-           when is_atom(tag) do
+           when is_atom(tag) and is_binary(metadata) do
         # `src` holds the opening marker and both delimiters (`![` + `]` + `(`),
         # `outer_content` the display text and `metadata` the second segment.
         # The display text sits *between* the delimiters, so it is spliced in
         # after the first two characters of `src`.
         {opening, delimiters} = src
-        literal = opening <> Enum.join(outer_content, "") <> delimiters <> metadata
+        literal = opening <> Md.Engine.flatten(outer_content) <> delimiters <> metadata
 
         state =
           %{state | path: path_tail, bag: %{state.bag | stock: [], indent: [], deferred: []}}
@@ -1785,9 +1844,9 @@ defmodule Md.Engine do
                path: [{tag, _attrs, [label]} | path_tail]
              } = state
            )
-           when is_atom(tag) and mode not in [:raw, {:inner, :raw}] do
+           when is_atom(tag) and is_binary(label) and mode not in [:raw, {:inner, :raw}] do
         # `label` already carries its closing bracket.
-        literal = "[" <> Enum.join(outer_content, "") <> "][" <> label
+        literal = "[" <> Md.Engine.flatten(outer_content) <> "][" <> label
 
         state =
           %{state | path: path_tail, bag: %{state.bag | stock: [], indent: [], deferred: []}}
@@ -1796,8 +1855,24 @@ defmodule Md.Engine do
         do_parse("", state)
       end
 
-      defp do_parse("", %Md.Parser.State{bag: %{stock: [last | rest]}} = state) do
+      # `bag.stock` normally holds text to be re-parsed. It can also hold an
+      # already-built AST node (a transform result, or the display text of a
+      # pair), which is not input at all -- re-feeding it crashed with a
+      # `FunctionClauseError` in `do_parse/2`. Such entries are pushed back onto
+      # the path instead.
+      # An exhausted mode stack means the document is over. Popping past the
+      # bottom (which `pop_mode/2` can do) used to leave `mode: []` and crash
+      # the next `do_parse/2` call.
+      defp do_parse(input, %Md.Parser.State{mode: []} = state),
+        do: do_parse(input, %{state | mode: [{:linefeed, 0}]})
+
+      defp do_parse("", %Md.Parser.State{bag: %{stock: [last | rest]}} = state)
+           when is_binary(last) do
         do_parse(last, %{state | bag: %{state.bag | stock: rest}})
+      end
+
+      defp do_parse("", %Md.Parser.State{bag: %{stock: [last | rest]}} = state) do
+        do_parse("", %{state | path: [last | state.path], bag: %{state.bag | stock: rest}})
       end
 
       defp do_parse("", state()) do
@@ -1962,12 +2037,8 @@ defmodule Md.Engine do
 
   defmacro helpers do
     quote generated: true, location: :keep, bind_quoted: [] do
-      # A document consisting only of whitespace produces a single `<br>` from
-      # the trailing-spaces `flush` rule. That is noise, not content.
-      @spec drop_blank_document(Md.Listener.state()) :: Md.Listener.state()
-      defp drop_blank_document(%Md.Parser.State{ast: ast} = state) do
-        if Enum.all?(ast, &match?({:br, _, _}, &1)), do: %{state | ast: []}, else: state
-      end
+      defp drop_blank_document(%Md.Parser.State{ast: ast} = state),
+        do: %{state | ast: Md.Engine.drop_blanks(ast, nest(:outer))}
 
       @spec maybe_flip_flop(String.t(), Md.Listener.state()) :: {String.t(), Md.Listener.state()}
       defp maybe_flip_flop(rest, state), do: maybe_flip_flop(rest, state, rest)

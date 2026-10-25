@@ -61,6 +61,7 @@ defmodule Md.MixProject do
       {:floki, "~> 0.33", optional: Mix.env() != :dev},
       {:credo, "~> 1.0", only: :ci, runtime: false},
       {:excoveralls, "~> 0.14", only: :test, runtime: false},
+      {:stream_data, "~> 1.0", only: :test},
       {:dialyxir, "~> 1.0", only: :ci, runtime: false},
       {:ex_doc, ">= 0.0.0", only: [:ci, :dev]},
       {:benchfella, "~> 0.3", only: :ci}

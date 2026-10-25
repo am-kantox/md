@@ -62,29 +62,52 @@ defmodule Md.Listener do
   """
   @callback element(context(), state()) :: :ok | {:update, state()}
 
-  @doc false
+  @doc """
+  Generates a listener with no-op handlers for every event.
+
+  ## Options
+
+    * `:emoji` -- the marker used by the default debug logging. Default: `"📑"`.
+    * `:debug` -- when `true`, the generated `handle_start/1`, `handle_end/1`
+      and `handle_tag/2` log at `:debug` level. Default: `false`.
+
+  A listener should be silent unless it is explicitly asked to be: a library
+  that logs on every parsed element is unusable in production.
+  """
   defmacro __using__(opts \\ []) do
     emoji = Keyword.get(opts, :emoji, "📑")
+    debug? = Keyword.get(opts, :debug, false)
 
     quote generated: true, location: :keep do
       @behaviour Md.Listener
 
       require Logger
 
-      def handle_start(_state), do: Logger.debug("[#{unquote(emoji)} start]")
+      @md_listener_emoji unquote(emoji)
+      @md_listener_debug unquote(debug?)
+
+      def handle_start(_state), do: log(:start)
       def handle_break(_state), do: :ok
       def handle_linefeed(_state), do: :ok
       def handle_whitespace(_state), do: :ok
       def handle_finalize(_state), do: :ok
-      def handle_end(_state), do: Logger.debug("[#{unquote(emoji)} end]")
+      def handle_end(_state), do: log(:end)
       def handle_comment(_text, _state), do: :ok
 
       def handle_tag({element, opening?}, state) do
-        Logger.debug(
-          "[#{unquote(emoji)} tag {#{inspect(element)}, opening: #{opening?}}], Context: " <>
-            inspect(state)
-        )
+        log({:tag, element, opening?}, state)
       end
+
+      @spec log(atom() | tuple(), Md.Listener.state() | nil) :: :ok
+      defp log(event, state \\ nil)
+
+      defp log(_event, _state) when not @md_listener_debug, do: :ok
+
+      defp log(event, nil),
+        do: Logger.debug("[#{@md_listener_emoji} #{inspect(event)}]")
+
+      defp log(event, state),
+        do: Logger.debug("[#{@md_listener_emoji} #{inspect(event)}], Context: #{inspect(state)}")
 
       def handle_esc(_state), do: :ok
       def handle_char(_state), do: :ok
@@ -125,8 +148,12 @@ defmodule Md.Listener do
 end
 
 defmodule Md.Listener.Debug do
-  @moduledoc false
-  use Md.Listener
+  @moduledoc """
+  A listener that logs every parsing event at `:debug` level. Useful when
+  writing a custom syntax; never enable it in production.
+  """
+
+  use Md.Listener, debug: true
 end
 
 defmodule Md.Listener.Beautifier do

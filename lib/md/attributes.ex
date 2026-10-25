@@ -253,6 +253,11 @@ defmodule Md.Attributes do
   @spec safe_uri?(atom() | binary(), binary() | true) :: boolean()
   def safe_uri?(key, value) when is_binary(value) do
     if uri_attribute?(key) do
+      # Browsers strip leading/trailing whitespace and embedded control
+      # characters before resolving a URL, so `"  javascript:alert(1)"` is a
+      # live handler. `URI.parse/1` does not, hence the normalisation.
+      value = value |> String.trim() |> String.replace(~r/[\x00-\x20]/, "")
+
       case URI.parse(value) do
         %URI{scheme: nil} -> true
         %URI{scheme: scheme} -> String.downcase(scheme) in safe_schemes()

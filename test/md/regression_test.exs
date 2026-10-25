@@ -82,6 +82,14 @@ defmodule Md.RegressionTest do
       assert html("![alt](javascript:alert)") =~ ~s|src=""|
     end
 
+    test "whitespace and control characters do not smuggle a scheme past the check" do
+      # Browsers strip these before resolving the URL, so `URI.parse/1` alone
+      # is not enough. Found by the property tests.
+      assert Md.Attributes.safe_uri?(:href, "    javascript:alert(1)") == false
+      assert Md.Attributes.safe_uri?(:href, "java\tscript:alert(1)") == false
+      assert Md.Attributes.safe_uri?(:href, "  https://e.com  ") == true
+    end
+
     test "safe attributes are still applied" do
       assert html(~s|text{{class: "p" data-x: y}}|) ==
                "<p class=\"p\" data-x=\"y\">text</p>"
