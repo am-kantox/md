@@ -7,7 +7,10 @@ defmodule Md.Parser.Syntax.Default do
   @behaviour Syntax
 
   @ol_max Application.compile_env(:md, :ol_max, 10)
-  @disclosure_range 3..12
+  # Reference labels may be as short as one character (`[1]`, `[a]`) and as
+  # long as a short word. The upper bound is also mirrored by
+  # `Md.Guards.@max_disclosure_label`, which bounds the guard's byte scan.
+  @disclosure_range 1..12
 
   @impl Syntax
   def settings,
@@ -56,7 +59,8 @@ defmodule Md.Parser.Syntax.Default do
          %{
            transform: Footnote,
            terminators: [?\]],
-           greedy: true,
+           closing: [?\]],
+           greedy: :left,
            ignore_in: [:img, :a, :figure, :abbr]
          }},
         {"@",

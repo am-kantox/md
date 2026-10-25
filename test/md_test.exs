@@ -780,6 +780,9 @@ defmodule MdTest do
     [linkref]: https://example.com
     """
 
+    # Every declaration line is consumed, including the unused `[2]`. Previously
+    # the unused one leaked into the output as a paragraph; declarations are
+    # metadata and must not be rendered.
     assert [
              {:p, nil, ["Hi,"]},
              {:p, nil,
@@ -790,8 +793,24 @@ defmodule MdTest do
                 {:a, %{href: "https://example.com"}, ["link"]},
                 "!"
               ]},
-             {:p, nil, ["Another [text]."]},
-             {:p, nil, ["[2]: ", {:a, %{href: "https://example.com"}, ["https://example.com"]}]}
+             {:p, nil, ["Another [text]."]}
+           ] == Md.parse(input).ast
+  end
+
+  test "deferred footnote" do
+    input = """
+    Hi, check[^1] this!
+
+    [^1]: https://example.com
+    """
+
+    assert [
+             {:p, nil,
+              [
+                "Hi, check",
+                {:a, %{href: "#1"}, [{:sup, nil, ["1"]}]},
+                " this!"
+              ]}
            ] == Md.parse(input).ast
   end
 

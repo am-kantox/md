@@ -59,10 +59,14 @@ defmodule Md.Parser do
 
   If passed, `XmlBuilder.{pre,post}walk/{2,3}` is being called before generation.
 
-  If `walker:` was not passed, or a `nil` value was returned from the accumulator,
-    this function returns the binary `XML` as is, otherwise it returns a tuple
-    `{XML, accumulator}` where `accumulator` is what has been returned from
-    underlying calls to `XmlBuilder.traverse/4`.
+  A walk function may return `nil` for a node; such nodes are dropped from the
+  tree rather than being handed to `XmlBuilder` (which would render them as a
+  meaningless empty element). If the walker leaves nothing behind, the empty
+  string is returned.
+
+  If `walker:` was not passed, this function returns the binary `XML` as is,
+  otherwise it returns a tuple `{XML, accumulator}` where `accumulator` is what
+  has been returned from the underlying calls to `XmlBuilder.traverse/4`.
   """
   @spec generate(binary() | L.state(), keyword()) :: binary() | {binary(), any()}
   def generate(input, options \\ [])
@@ -75,27 +79,40 @@ defmodule Md.Parser do
   def generate(%State{ast: ast}, options) when is_list(options) do
     {walker, options} = Keyword.pop(options, :walker)
 
-    {ast, acc} =
-      case walker do
-        nil -> {ast, nil}
-        fun when is_function(fun, 1) -> {XmlBuilder.prewalk(ast, fun), nil}
-        fun when is_function(fun, 2) -> XmlBuilder.prewalk(ast, %{}, fun)
-        {:pre, fun} when is_function(fun, 1) -> {XmlBuilder.prewalk(ast, fun), nil}
-        {:post, fun} when is_function(fun, 1) -> {XmlBuilder.postwalk(ast, fun), nil}
-        {:pre, fun} when is_function(fun, 2) -> XmlBuilder.prewalk(ast, %{}, fun)
-        {:post, fun} when is_function(fun, 2) -> XmlBuilder.postwalk(ast, %{}, fun)
-        {:pre, fun, acc} when is_function(fun, 2) -> XmlBuilder.prewalk(ast, acc, fun)
-        {:post, fun, acc} when is_function(fun, 2) -> XmlBuilder.postwalk(ast, acc, fun)
-      end
+    {ast, acc} = apply_walker(ast, walker)
 
     options = Keyword.put_new(options, :format, *: :indent, pre: :none, code: :none)
-    generated = XmlBuilder.generate(ast, options)
+    generated = XmlBuilder.generate(drop_nils(ast), options)
 
     if is_nil(acc), do: generated, else: {generated, acc}
   end
 
   def generate(%State{} = state, parser) when is_atom(parser),
     do: generate(state, parser: parser)
+
+  # A walk function is allowed to return `nil` to drop a node. `XmlBuilder`
+  # would otherwise render `nil` as `</>`, so the tree is pruned afterwards.
+  @spec apply_walker(L.branch(), nil | function() | tuple()) :: {L.branch(), any()}
+  defp apply_walker(ast, walker) do
+    case walker do
+      nil -> {ast, nil}
+      fun when is_function(fun, 1) -> {XmlBuilder.prewalk(ast, fun), nil}
+      fun when is_function(fun, 2) -> XmlBuilder.prewalk(ast, %{}, fun)
+      {:pre, fun} when is_function(fun, 1) -> {XmlBuilder.prewalk(ast, fun), nil}
+      {:post, fun} when is_function(fun, 1) -> {XmlBuilder.postwalk(ast, fun), nil}
+      {:pre, fun} when is_function(fun, 2) -> XmlBuilder.prewalk(ast, %{}, fun)
+      {:post, fun} when is_function(fun, 2) -> XmlBuilder.postwalk(ast, %{}, fun)
+      {:pre, fun, acc} when is_function(fun, 2) -> XmlBuilder.prewalk(ast, acc, fun)
+      {:post, fun, acc} when is_function(fun, 2) -> XmlBuilder.postwalk(ast, acc, fun)
+    end
+  end
+
+  @spec drop_nils(L.branch()) :: L.branch()
+  defp drop_nils(ast) when is_list(ast),
+    do: ast |> Enum.reject(&is_nil/1) |> Enum.map(&drop_nils/1)
+
+  defp drop_nils({tag, attrs, content}), do: {tag, attrs, drop_nils(content)}
+  defp drop_nils(other), do: other
 
   @doc deprecated: "Use generate/2 instead passing `parser: parser` as option"
   @spec generate(binary() | L.state(), module(), keyword()) :: binary() | {binary(), any()}

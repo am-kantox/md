@@ -18,7 +18,8 @@ defmodule Md.Parser.Syntax.Void do
       linebreaks: [<<?\r, ?\n>>, <<?\n>>],
       empty_tags: ~w|img hr br|a,
       requiring_attributes_tags: ~w|a|a,
-      linewrap: false
+      linewrap: false,
+      attribute_allowlist: :safe
     }
   end
 

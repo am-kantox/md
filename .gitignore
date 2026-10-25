@@ -39,3 +39,11 @@ bench/snapshots/
 
 /.ragex/
 /.dsh/
+
+/.hex/
+/.mix/
+/.yoke/
+
+/.hex/
+/.mix/
+/.yoke/

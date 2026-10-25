@@ -30,8 +30,10 @@ defmodule Md do
 
   """
   @impl Md.Parser
-  def parse(input, state \\ %State{}),
-    do: with({"", state} <- state.type.parse(input, state), do: state)
+  def parse(input, state \\ %State{}) do
+    {_rest, state} = state.type.parse(input, state)
+    state
+  end
 
   @doc """
   Helper function to supply a custom parser in call to `Md.parse/2` as

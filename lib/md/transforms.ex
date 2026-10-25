@@ -148,12 +148,27 @@ defmodule Md.Transforms.Footnote do
   @moduledoc "Internal transformation to format footnotes"
   @behaviour Md.Transforms
 
+  @href_prefix "#"
+
   @impl Md.Transforms
   def apply(md, text) do
-    # [TODO] closing is needed here
-    ref = String.slice(text, String.length(md)..-2//1)
+    # `text` is the marker followed by the collected label, possibly with a
+    # stray delimiter still attached (the `magnet` handler is greedy here, so
+    # the closing bracket and any surrounding whitespace may be included).
+    # The `disclosure` handler registers the *bare* label as the key, so the
+    # reference must be normalised the same way or the two never match.
+    ref =
+      text
+      |> String.replace_prefix(md, "")
+      |> String.trim()
+      |> String.trim_leading("^")
+      |> String.trim_trailing("]")
+      |> String.trim()
 
-    {:a, %{__deferred__: %{attribute: :href, content: text, kind: :attribute}},
+    # A footnote is an in-page anchor, not a link to the note's text. The
+    # deferred lookup is kept so a custom syntax can override the target by
+    # declaring `[^label]: url`; the fallback is the conventional `#label`.
+    {:a, %{__deferred__: %{attribute: :href, content: ref, fallback: @href_prefix <> ref}},
      [{:sup, nil, [ref]}]}
   end
 end

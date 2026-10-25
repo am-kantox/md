@@ -39,6 +39,12 @@ defmodule Md.Engine do
       @requiring_attributes_tags get_in(syntax, [:settings, :requiring_attributes_tags]) || []
       @linewrap get_in(syntax, [:settings, :linewrap]) || false
 
+      # Inline attributes are author-controlled, so they are filtered through
+      # `Md.Attributes` with this policy. `:safe` (the default) keeps only a
+      # known-good set and refuses dangerous URI schemes; `:all` disables
+      # filtering entirely and must only be used for trusted input.
+      @attribute_allowlist get_in(syntax, [:settings, :attribute_allowlist]) || :safe
+
       Md.Engine.macros()
       Md.Engine.init()
 
@@ -327,21 +333,57 @@ defmodule Md.Engine do
             chars when is_binary(chars) -> chars
           end
 
+        # A declaration line such as `[1]: https://example.com` or
+        # `[^1]: The note.` is recognised at the beginning of a line. The label
+        # is whatever sits between the line start and the `:` marker.
+        #
+        # NOTE: this must *not* be gated on the deferred registry being
+        # non-empty. The registry starts empty by definition, so such a guard
+        # made the very first declaration impossible to register -- and
+        # therefore every declaration, and consequently every deferred
+        # reference and footnote, silently unresolved.
+        #
+        # A label is bracketed (`[1]`, `[^abc]`), never spans a line break, and
+        # is followed by whitespace or end-of-input. Without those constraints
+        # the fixed-width window happily matches across paragraph boundaries
+        # (`[a][1]\n\n[1`) and swallows the document.
+        #
+        # The cheap, guard-legal constraints (bracket shape and the following
+        # whitespace) are in the guard. The remaining check -- that the label is
+        # a *single* token on a *single* line -- is delegated to
+        # `Md.Guards.disclosure_label?/1` because it cannot be expressed as a
+        # guard without either generated per-length clauses or a scan that
+        # raises on short labels.
+        #
+        # A rejected candidate must fall through to the `pair` handler, which
+        # owns `[text][ref]`. Re-feeding the input from an `else` branch would
+        # either recurse on an unchanged state forever or consume a byte and
+        # destroy the reference syntax, so instead the body simply *does not*
+        # consume anything and resumes with the plain-text clause.
         Enum.each(disclosure_range, fn len ->
           defp do_parse(
-                 <<disclosure::binary-size(unquote(len)), unquote(md), rest::binary>> = input,
-                 %Md.Parser.State{
-                   mode: [{:linefeed, pos} | _],
-                   bag: %{deferred: [_ | _] = deferreds}
-                 } = state
+                 <<line::binary-size(unquote(len)), unquote(md), rest::binary>> = input,
+                 %Md.Parser.State{mode: [{:linefeed, _pos} | _]} = state
                )
-               when in_short_list(disclosure, deferreds) do
-            state =
-              state
-              |> replace_mode({:inner, :raw})
-              |> push_path({:__deferred__, disclosure, []})
+               when byte_size(line) > 2 and
+                      binary_part(line, 0, 1) == "[" and
+                      binary_part(line, byte_size(line) - 1, 1) == "]" and
+                      (rest == "" or binary_part(rest, 0, 1) in [" ", "\t", "\n", "\r"]) do
+            if Md.Guards.disclosure_label?(line) do
+              state =
+                state
+                |> replace_mode({:inner, :raw})
+                |> push_path({:__deferred__, Md.Deferred.key(line), []})
 
-            do_parse(rest, state)
+              do_parse(rest, state)
+            else
+              # Not a declaration (the label spans a line break or contains a
+              # nested bracket). Drop the line-feed mode so the ordinary
+              # plain-text clause consumes one character, but keep every other
+              # mode on the stack -- resetting to `[:md]` would discard the
+              # enclosing brace/paragraph context and leave it unclosed.
+              do_parse(input, replace_mode(state, :md))
+            end
           end
         end)
 
@@ -349,17 +391,40 @@ defmodule Md.Engine do
                <<unquote(until), rest::binary>>,
                %Md.Parser.State{
                  mode: [mode | _],
-                 path: [{:__deferred__, disclosure, [content]} | path]
+                 path: [{:__deferred__, label, [content]} | path]
                } = state
              )
              when mode in [:raw, {:inner, :raw}] do
-          deferred = [{disclosure, content} | state.bag.deferred]
+          deferred = [{label, content} | state.bag.deferred]
 
+          # The declaration itself produces no output: it only registers the
+          # label. The `:inner, :raw` mode is dropped and the line-feeding
+          # restarts, so the rest of the document parses normally.
           state =
             %{state | bag: Map.put(state.bag, :deferred, deferred), path: path}
             |> replace_mode({:linefeed, 0})
 
           do_parse(rest, state)
+        end
+
+        # A declaration may also be the very last line of the document, in
+        # which case no terminating line break ever arrives. Without this
+        # clause the collected value would leak into the AST as a bare string.
+        defp do_parse(
+               "",
+               %Md.Parser.State{
+                 mode: [mode | _],
+                 path: [{:__deferred__, label, [content]} | path]
+               } = state
+             )
+             when mode in [:raw, {:inner, :raw}] do
+          deferred = [{label, content} | state.bag.deferred]
+
+          state =
+            %{state | bag: Map.put(state.bag, :deferred, deferred), path: path}
+            |> replace_mode({:linefeed, 0})
+
+          do_parse("", state)
         end
       end)
     end
@@ -387,6 +452,11 @@ defmodule Md.Engine do
           |> Enum.reverse()
 
         greedy = Map.get(properties, :greedy, false)
+
+        # Terminators that close the markup itself (e.g. the `]` of `[^1]`) are
+        # consumed; all other terminators merely end the magnet word and are put
+        # back into the stream as ordinary text.
+        closing = properties |> Map.get(:closing, []) |> List.wrap()
 
         defp do_parse(
                <<x::utf8>>,
@@ -417,7 +487,12 @@ defmodule Md.Engine do
               when (terminator == :ascii_punctuation and is_ascii_punct(x)) or
                      (terminator == :utf8_punctuation and is_utf8_punct(x)) or
                      x in unquote(terminators) ->
-                {pre <> stock <> post, <<x::utf8>> <> delim <> rest}
+                # A *closing* terminator (e.g. the `]` of `[^1]`) belongs to the
+                # markup and is consumed; any other terminator is ordinary text
+                # that merely ends the magnet word and is put back.
+                if x in unquote(closing),
+                  do: {pre <> stock <> post, delim <> rest},
+                  else: {pre <> stock <> post, <<x::utf8>> <> delim <> rest}
 
               _ ->
                 {pre <> stock <> <<x::utf8>> <> post, delim <> rest}
@@ -439,11 +514,56 @@ defmodule Md.Engine do
 
           rest =
             case state.mode do
-              [{:inner, _, _} | _] -> " " <> rest
+              [{:inner, _, _} | _] -> "\u00A0" <> rest
               _ -> rest
             end
 
           do_parse(rest, state)
+        end
+
+        # A magnet may also be closed by one of its own *closing* markers rather
+        # than by whitespace -- `[^1]` ends at `]`, not at a space. Without this
+        # clause the closing bracket was swallowed into the collected text and
+        # re-emitted as literal output.
+        #
+        # Only `:closing` markers participate. Ordinary terminators (`?,` for
+        # `@handle`) merely end the word and are put back by the whitespace
+        # clause above; consuming them here would change long-standing
+        # behaviour for every magnet that lists punctuation.
+        if closing != [] do
+          defp do_parse(
+                 <<x::utf8, rest::binary>>,
+                 %Md.Parser.State{
+                   bag: %{stock: [stock, unquote(md)]},
+                   mode: [:magnet | _]
+                 } = state
+               )
+               when x in unquote(closing) do
+            transformed = unquote(transform).(unquote(md), stock)
+
+            state =
+              %{state | bag: %{state.bag | stock: []}}
+              |> case do
+                %Md.Parser.State{path: []} = state ->
+                  push_path(state, {nest(:outer), nil, [transformed]})
+
+                state ->
+                  state |> push_path(transformed) |> to_ast()
+              end
+              |> listener({:tag, {unquote(md), :magnet}, nil})
+              |> pop_mode(:magnet)
+
+            # Mirror the whitespace clause: inside a nested container the
+            # separator has to be restored, or the following text is glued to
+            # the just-emitted element.
+            rest =
+              case state.mode do
+                [{:inner, _, _} | _] -> "\u00A0" <> rest
+                _ -> rest
+              end
+
+            do_parse(rest, state)
+          end
         end
       end)
 
@@ -882,6 +1002,12 @@ defmodule Md.Engine do
         disclosure_closing = properties[:disclosure_closing]
         attrs = Macro.escape(properties[:attributes])
 
+        # The first segment (the display text: `alt`, `link text`) is collected
+        # verbatim for `{:attribute, {_, _}}` pairs such as `![alt](src)` and
+        # `!![caption](src)`, where it becomes an attribute value rather than
+        # rendered content -- `![some_title](…)` must keep its underscore.
+        # Pairs whose display text *is* rendered (`[link](href)`) stay in `:md`
+        # so that inline markup inside the label keeps working.
         inner_mode = if match?({:attribute, {_, _}}, outer), do: :raw, else: :md
 
         defp do_parse(
@@ -917,6 +1043,9 @@ defmodule Md.Engine do
                } = state
              )
              when mode not in [{:inner, :raw}] do
+          # `content` is the display text collected so far, in reverse order.
+          # It moves to `stock` while the metadata segment is gathered in
+          # `:raw` mode.
           state =
             state
             |> pop_mode(unquote(inner_mode))
@@ -960,10 +1089,15 @@ defmodule Md.Engine do
           end
         end
 
+        # The metadata segment is only closed once it has been *opened*: the
+        # `:raw` mode is entered exclusively by the `inner_opening` clause
+        # above. Without this guard, a stray `)` in ordinary text closed a pair
+        # that was never opened, reordering the content and emitting garbage
+        # such as `<img>x.pngalt</img>` for the input `![alt](x.png`.
         defp do_parse(
                <<unquote(inner_closing), rest::binary>>,
                %Md.Parser.State{
-                 mode: [mode | _],
+                 mode: [:raw | _],
                  bag: %{stock: [_ | _] = outer_content},
                  path: [{unquote(tag), attrs, [content]} | path_tail]
                } = state
@@ -1029,7 +1163,11 @@ defmodule Md.Engine do
                  } = state
                )
                when mode not in [:raw, {:inner, :raw}] and is_binary(content) do
-            content = unquote(disclosure_opening) <> content <> unquote(disclosure_closing)
+            # The reference is registered under its *bare* label (see
+            # `deferred_key/1`), so the lookup key must be normalised the same
+            # way -- otherwise `[a][1]` would look for `"[1]"` while the
+            # declaration registered `"1"` and the reference never resolved.
+            content = Md.Deferred.key(content)
 
             final_tag =
               case unquote(outer) do
@@ -1472,18 +1610,11 @@ defmodule Md.Engine do
               {tag, attrs, grabbed} ->
                 [grabbed | collected] = grabbed
 
-                set =
-                  grabbed
-                  |> String.split(~r/[,|]\s*|(?<=\w|"|')\s+(?=\w|"|')/)
-                  |> Enum.map(&String.split(&1, ~r/[:=]\s*/))
-                  |> Enum.map(fn
-                    [k] ->
-                      {String.to_atom(k), true}
-
-                    [k, v] ->
-                      {String.to_atom(k), v |> String.trim("'") |> String.trim("\"")}
-                  end)
-                  |> Map.new()
+                # Parsing and sanitising live in `Md.Attributes`: inline
+                # attributes are author-controlled and land verbatim in the
+                # output, so they are the one place a document could inject
+                # arbitrary HTML attributes (notably `on*` handlers).
+                set = Md.Attributes.parse(grabbed, @attribute_allowlist)
 
                 %{state | path: [{tag, Map.merge(attrs || %{}, set), collected} | t]}
 
@@ -1800,33 +1931,8 @@ defmodule Md.Engine do
       end
 
       @spec apply_deferreds(Md.Listener.state()) :: Md.Listener.state()
-      defp apply_deferreds(%Md.Parser.State{bag: %{deferred: []}} = state), do: state
-
-      defp apply_deferreds(%Md.Parser.State{bag: %{deferred: deferreds}} = state) do
-        deferreds =
-          deferreds
-          |> Enum.filter(&match?({_, _}, &1))
-          |> Map.new()
-
-        ast =
-          Macro.prewalk(state.ast, fn
-            {tag,
-             %{__deferred__: %{attribute: attribute, content: mark, kind: :attribute}} = attrs,
-             content} ->
-              value = Map.get(deferreds, mark, content)
-
-              attrs =
-                attrs
-                |> Map.delete(:__deferred__)
-                |> Map.put(attribute, value)
-
-              {tag, attrs, content}
-
-            other ->
-              other
-          end)
-
-        %{state | ast: ast}
+      defp apply_deferreds(%Md.Parser.State{ast: ast, bag: %{deferred: deferred}} = state) do
+        %{state | ast: Md.Deferred.apply(ast, deferred), bag: %{state.bag | deferred: []}}
       end
 
       @spec update_attrs(Md.Listener.branch(), %{required(atom()) => atom()}) ::
@@ -1863,6 +1969,7 @@ defmodule Md.Engine do
           |> reverse()
           |> update_attrs(pop)
           |> trim(false)
+          |> sanitize_uri()
           |> maybe_hide()
 
         state = %{state | path: [], ast: [last | ast]}
@@ -1878,11 +1985,32 @@ defmodule Md.Engine do
           |> reverse()
           |> update_attrs(pop)
           |> trim(false)
+          |> sanitize_uri()
           |> maybe_hide()
 
         state = %{state | path: [{elem, attrs, [last | branch]} | rest]}
         listener(state, {:tag, tag, false})
       end
+
+      # URI attributes produced by `pair` (`[a](href)`, `![alt](src)`) are as
+      # author-controlled as the inline `{{…}}` ones, so they get the same
+      # scheme check. A rejected value is blanked rather than dropped, so the
+      # element keeps its shape and the surrounding markup still renders.
+      @spec sanitize_uri(Md.Listener.trace()) :: Md.Listener.trace()
+      defp sanitize_uri({tag, attrs, content}) when is_map(attrs) do
+        attrs =
+          Enum.reduce(attrs, attrs, fn
+            {key, value}, acc when is_atom(key) and is_binary(value) ->
+              if Md.Attributes.safe_uri?(key, value), do: acc, else: Map.put(acc, key, "")
+
+            _, acc ->
+              acc
+          end)
+
+        {tag, attrs, content}
+      end
+
+      defp sanitize_uri(trace), do: trace
 
       @spec reverse(Md.Listener.trace()) :: Md.Listener.trace()
       defp reverse({_, _, branch} = trace) when is_list(branch), do: trim(trace, true)

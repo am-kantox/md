@@ -89,4 +89,26 @@ defmodule Md.Guards do
                   hd(tl(tl(tl(tl(tl(tl(tl(list)))))))) == what or
                   hd(tl(tl(tl(tl(tl(tl(tl(tl(list))))))))) == what or
                   hd(tl(tl(tl(tl(tl(tl(tl(tl(tl(list)))))))))) == what
+
+  @doc false
+  # A disclosure label is a single bracketed token on a single line: `[1]`,
+  # `[^abc]`. A token such as `[a][1]` is a *reference*, not a declaration.
+  #
+  # This is a plain function, not a guard, on purpose. Guards cannot
+  # short-circuit `and`, `binary_part/3` raises when reading past the end of a
+  # binary, and `String` functions are not guard-legal at all -- expressing this
+  # as a guard requires either generated per-length clauses or a scan that
+  # raises on short labels. A function called from the clause *body* is both
+  # simpler and obviously correct; the engine handles a `false` result by
+  # falling through to the `pair` handler.
+  @spec disclosure_label?(binary()) :: boolean()
+  def disclosure_label?(label) when is_binary(label) and byte_size(label) > 2 do
+    inner = binary_part(label, 1, byte_size(label) - 2)
+
+    binary_part(label, 0, 1) == "[" and
+      binary_part(label, byte_size(label) - 1, 1) == "]" and
+      not String.contains?(inner, ["\n", "\r", "[", "]"])
+  end
+
+  def disclosure_label?(_label), do: false
 end

@@ -11,7 +11,8 @@ defmodule Md.Parser.Syntax do
           optional(:disclosure_range) => Range.t(),
           optional(:empty_tags) => [atom()],
           optional(:requiring_attributes_tags) => [atom()],
-          optional(:linewrap) => boolean()
+          optional(:linewrap) => boolean(),
+          optional(:attribute_allowlist) => Md.Attributes.policy()
         }
 
   @typedoc "Syntax item definition"
@@ -92,6 +93,7 @@ defmodule Md.Parser.Syntax do
           | :empty_tags
           | :requiring_attributes_tags
           | :linewrap
+          | :attribute_allowlist
         ]
 
   def settings do
@@ -102,7 +104,8 @@ defmodule Md.Parser.Syntax do
       :disclosure_range,
       :empty_tags,
       :requiring_attributes_tags,
-      :linewrap
+      :linewrap,
+      :attribute_allowlist
     ]
   end
 
