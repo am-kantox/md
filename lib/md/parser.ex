@@ -40,6 +40,28 @@ defmodule Md.Parser do
   """
   @type parsing_stage :: {binary(), L.state()}
 
+  @typedoc """
+  A function applied to the AST before it is rendered.
+
+  A walk function may return `nil` for a node to drop it.
+  """
+  @type walker ::
+          (L.branch() -> L.branch() | nil)
+          | (L.branch(), any() -> {L.branch() | nil, any()})
+          | {:pre | :post, (L.branch() -> L.branch() | nil)}
+          | {:pre | :post, (L.branch(), any() -> {L.branch() | nil, any()})}
+          | {:pre | :post, (L.branch(), any() -> {L.branch() | nil, any()}), any()}
+
+  @typedoc "Options accepted by `generate/2`"
+  @type options ::
+          [
+            {:parser, module()}
+            | {:walker, walker()}
+            | {:format, :none | :indent}
+            | {:pre, :none | :indent}
+            | {:code, :none | :indent}
+          ]
+
   @doc """
   Takes a not parsed yet input and the state, returns the updated remainder and state.
   """
@@ -68,7 +90,7 @@ defmodule Md.Parser do
   otherwise it returns a tuple `{XML, accumulator}` where `accumulator` is what
   has been returned from the underlying calls to `XmlBuilder.traverse/4`.
   """
-  @spec generate(binary() | L.state(), keyword()) :: binary() | {binary(), any()}
+  @spec generate(binary() | L.state(), options()) :: binary() | {binary(), any()}
   def generate(input, options \\ [])
 
   def generate(input, options) when is_binary(input) and is_list(options) do

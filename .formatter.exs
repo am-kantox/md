@@ -1,5 +1,5 @@
 locals_without_parens = [
-  # DSL
+  # DSL handlers
   custom: 2,
   substitute: 2,
   escape: 2,
@@ -14,12 +14,19 @@ locals_without_parens = [
   paragraph: 2,
   list: 2,
   brace: 2,
-  linewrap: 1
+  # DSL settings
+  outer: 1,
+  span: 1,
+  linebreaks: 1,
+  disclosure_range: 1,
+  empty_tags: 1,
+  requiring_attributes_tags: 1,
+  linewrap: 1,
+  attribute_allowlist: 1
 ]
 
 [
   locals_without_parens: locals_without_parens,
-  import_deps: if(Mix.env() == :test, do: [:mneme], else: []),
   export: [
     locals_without_parens: locals_without_parens
   ],

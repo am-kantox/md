@@ -20,7 +20,19 @@ the `:settings` key in the syntax map.
 - **`linewrap`** (`boolean`) -- when `true`, every newline inside a paragraph inserts a `<br>` tag
   instead of a literal newline character. Default: `false`.
 - **`disclosure_range`** (`Range.t()`) -- allowed length range for disclosure reference labels.
-  Default: `3..5` (override in `Default` to `3..12`).
+  Default: `1..12` in `Md.Parser.Syntax.Default`, so both `[1]` and `[^abc]` work.
+- **`attribute_allowlist`** (`:safe | :all | [atom() | String.t()]`) -- policy for the inline
+  attributes declared with the `attributes` handler. Default: `:safe`.
+
+  Inline attributes are author-controlled and land verbatim in the output, so
+  they are the one place a markup document could inject arbitrary HTML
+  attributes. Under `:safe` only a known-good set is kept (`class`, `id`,
+  `title`, `href`, `src`, `style`, …), plus the open-ended `data-*` and
+  `aria-*` families; URI attributes additionally reject executable schemes
+  (`javascript:`, `data:`, `vbscript:`). `:all` lifts the allow-list and must
+  only be used for trusted input. A list keeps exactly the named attributes.
+
+  `on*` event handlers are refused under every policy, including `:all`.
 
 ```elixir
 %{
@@ -31,7 +43,8 @@ the `:settings` key in the syntax map.
     empty_tags: ~w|img hr br|a,
     requiring_attributes_tags: ~w|a|a,
     linewrap: false,
-    disclosure_range: 3..12
+    disclosure_range: 1..12,
+    attribute_allowlist: :safe
   }
 }
 ```
@@ -505,6 +518,13 @@ text through a transform function.
   - `:right` -- delimiter included, marker not.
 - **`ignore_in`** (`[atom]`) -- list of parent tag names inside which this magnet
   should not trigger. Default: `[]`.
+- **`closing`** (`[codepoint]`) -- terminators that *close* the markup rather than
+  merely ending the word. A closing marker is consumed; every other terminator is
+  put back into the stream as ordinary text. Default: `[]`.
+
+  This is what makes `[^1]` work: `]` is both the terminator and the closing
+  marker, so it disappears from the output instead of being re-emitted after the
+  generated `<sup>`.
 
 ```elixir
 magnet: [
@@ -512,7 +532,8 @@ magnet: [
   {"[^", %{
     transform: Md.Transforms.Footnote,
     terminators: [?\]],
-    greedy: true,
+    closing: [?\]],
+    greedy: :left,
     ignore_in: [:img, :a, :figure, :abbr]
   }},
 

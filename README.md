@@ -25,6 +25,19 @@ parse the common markdown, `Md` is probably not the correct choice.
 
 But if one wants to easily extend syntax almost without limits, `Md` might be good.
 
+### Security
+
+`Md` renders markup written by authors, which makes two things worth knowing:
+
+- **Inline attributes are filtered.** `{{class: "x"}}` attaches attributes to the
+  preceding element, so it is the one place a document could inject HTML. Under
+  the default `:safe` policy only a known-good set of attributes is kept (plus
+  `data-*`/`aria-*`), URI attributes refuse executable schemes such as
+  `javascript:`, and `on*` event handlers are refused under *every* policy. See
+  the `:attribute_allowlist` setting in `stuff/handler-parameters.md`.
+- **Attribute names never grow the atom table.** Names are resolved against a
+  fixed lookup table, so a hostile document cannot exhaust the VM's atom table.
+
 ### Markup Handling
 
 There are several different syntax patterns recognizable by `Md`. Those are:
@@ -147,6 +160,14 @@ Instead of `@syntax` module attribute, one might use
 
 ### Changelog
 
+- **`0.14.0`** fix deferred references and footnotes, which raised on every
+  input; filter inline attributes (`:attribute_allowlist`, `on*` always
+  refused, `javascript:` URIs rejected); stop attribute names from growing the
+  atom table; `walker:` returning `nil` now drops the node instead of rendering
+  `</>`; auto-linked URLs no longer swallow trailing punctuation; balanced
+  parentheses inside `[text](url)` are preserved; unterminated pairs render as
+  their literal source; DSL settings compose correctly; whitespace-only input
+  produces no output
 - **`0.12.2`** fix `Md.Parser.Syntax.merge/2` crashing when a custom `:settings`
   map is supplied; add an opt-out `escape: false` property for `block:` entries
   to carry content through verbatim instead of HTML-entity-escaping it

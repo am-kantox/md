@@ -2,7 +2,7 @@ defmodule Md.MixProject do
   use Mix.Project
 
   @app :md
-  @version "0.13.1"
+  @version "0.14.0"
 
   def project do
     [
@@ -56,15 +56,14 @@ defmodule Md.MixProject do
   defp deps do
     [
       {:xml_builder_ex, "~> 3.1"},
-      {:unicode, "~> 2.0"},
-      {:unicode_set, "~> 1.0"},
+      {:unicode, "~> 2.2"},
+      {:unicode_set, "~> 1.9"},
       {:floki, "~> 0.33", optional: Mix.env() != :dev},
       {:credo, "~> 1.0", only: :ci, runtime: false},
       {:excoveralls, "~> 0.14", only: :test, runtime: false},
       {:dialyxir, "~> 1.0", only: :ci, runtime: false},
       {:ex_doc, ">= 0.0.0", only: [:ci, :dev]},
-      {:benchfella, "~> 0.3", only: :ci},
-      {:earmark, "~> 1.4", only: :ci}
+      {:benchfella, "~> 0.3", only: :ci}
     ]
   end
 

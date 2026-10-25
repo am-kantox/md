@@ -22,7 +22,7 @@
         # In the latter case `**/*.{ex,exs}` will be used.
         #
         included: ["lib/", "src/", "test/"],
-        excluded: ["test/support/envio.ex", "test/envio_test.exs", "test/camarero_test.exs"]
+        excluded: []
       },
       #
       # Load and configure plugins here:

@@ -111,7 +111,17 @@ defmodule Md.Parser.Syntax do
 
   alias Md.Parser.Syntax.Default
 
-  @spec merge(t()) :: t()
+  @doc """
+  Merges a custom syntax definition into `default`.
+
+  Categories other than `:settings` are merged item-wise and then sorted by
+  **descending marker length**, so a longer marker is always tried before a
+  shorter one that prefixes it (`"**"` before `"*"`, `"!!["` before `"!["`).
+
+  `:settings` is a plain `atom => term` map rather than a list of
+  `{marker, properties}` items, so it is merged as a map and left as one.
+  """
+  @spec merge(t(), t()) :: t()
   def merge(custom, default \\ Map.put(Default.syntax(), :settings, Default.settings())) do
     default
     |> Map.merge(custom, fn

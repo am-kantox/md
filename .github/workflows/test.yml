@@ -12,6 +12,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # The oldest pair the library claims to support (`mix.exs` declares
+          # `elixir: "~> 1.12"`), and the current one.
+          - pair:
+              otp: "24"
+              elixir: "1.12"
           - pair:
               otp: "26"
               elixir: "1.16"
@@ -19,8 +24,8 @@ jobs:
               otp: "29"
               elixir: "1.20"
     steps:
-      - uses: actions/checkout@v2
-      - uses: erlef/setup-elixir@v1
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
         with:
           otp-version: ${{matrix.pair.otp}}
           elixir-version: ${{matrix.pair.elixir}}
@@ -29,6 +34,6 @@ jobs:
           mix local.rebar --force
           mix local.hex --force
           mix do deps.get, compile
-          mix compile
-      - name: Setup Rabbit → Run tests
+          mix compile --warnings-as-errors
+      - name: Run tests
         run: mix tests

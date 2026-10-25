@@ -2055,7 +2055,7 @@ defmodule Md.Engine do
         end
       end
 
-      @spec apply_deferreds(Md.Listener.state()) :: Md.Listener.state()
+      @spec apply_deferreds(Md.Parser.State.t()) :: Md.Parser.State.t()
       defp apply_deferreds(%Md.Parser.State{ast: ast, bag: %{deferred: deferred}} = state) do
         %{state | ast: Md.Deferred.apply(ast, deferred), bag: %{state.bag | deferred: []}}
       end

@@ -54,6 +54,12 @@ defmodule Md.Listener do
           }
         }
 
+  @doc """
+  Called for every parsing event.
+
+  Return `:ok` to leave the parser state untouched, or `{:update, state}` to
+  replace it -- which is how a listener rewrites the AST as it is built.
+  """
   @callback element(context(), state()) :: :ok | {:update, state()}
 
   @doc false
