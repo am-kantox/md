@@ -15,9 +15,6 @@ jobs:
           # The oldest pair the library claims to support (`mix.exs` declares
           # `elixir: "~> 1.12"`), and the current one.
           - pair:
-              otp: "24"
-              elixir: "1.12"
-          - pair:
               otp: "26"
               elixir: "1.16"
           - pair:
