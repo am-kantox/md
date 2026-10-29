@@ -35,7 +35,8 @@ defmodule Md.Deferred do
   in a *pre*walk would make the walker revisit the replacement forever, because
   a binary is its own pre-walk result.
   """
-  @spec apply(Md.Listener.branch(), registry()) :: Md.Listener.branch()
+  @spec apply(Md.Listener.branch() | [Md.Listener.branch()], registry()) ::
+          Md.Listener.branch() | [Md.Listener.branch()]
   def apply(ast, registry) do
     deferreds =
       registry

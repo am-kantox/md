@@ -26,7 +26,7 @@ defmodule Md.Engine do
   # Renders an AST fragment back to text, dropping any element that was
   # already built. Used only when rolling an unterminated pair back to its
   # literal source, where the display text may already contain elements.
-  @spec flatten([Md.Listener.branch()]) :: binary()
+  @spec flatten(Md.Listener.branch() | [Md.Listener.branch()]) :: binary()
   def flatten(nodes) when is_list(nodes), do: Enum.map_join(nodes, &flatten/1)
   def flatten(text) when is_binary(text), do: text
   def flatten({_, _, content}) when is_list(content), do: flatten(content)

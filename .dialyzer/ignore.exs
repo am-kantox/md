@@ -1,12 +1,11 @@
 [
   # ---------------------------------------------------------------------------
-  # Dialyzer cannot analyse the macro-generated parser.
+  # Narrow filters for the remaining syntax/render helper contract warnings.
   #
-  # `do_parse/2` is emitted as hundreds of clauses by `Md.Engine`'s macros, one
-  # per syntax declaration. Dialyzer cannot prove that the resulting clause set
-  # terminates, so it infers `no_return()` and flags the (correct) `@spec` as an
-  # invalid contract. The parser is exercised by the whole test suite, including
-  # property tests over generated input.
+  # The macro-generated parser is analyzed normally. Its former no-return
+  # inference came from a node-only Md.Deferred.apply/2 contract being called
+  # with a whole document list, not an inability to analyze generated clauses.
+  # Typed probes in test/support/contract_probe.ex protect those success paths.
   #
   # The format is `{file, warning_type}`, which suppresses every warning of that
   # type in that file. Anything not listed here is a real problem and must be
@@ -28,12 +27,6 @@
   {"lib/md/parser/syntax.ex", :invalid_contract},
   {"lib/md/parser/syntax.ex", :call},
   {"lib/md/parser/syntax.ex", :no_return},
-
-  # Every warning inside `Md.Parser.Default` is attributed to the module rather
-  # than to the macro that emitted the clause, because the module is built by
-  # `use Md.Parser`. These two are the `apply_deferreds/1` and `do_parse/2`
-  # cases already explained above.
-  {"lib/md/parser/default.ex", :invalid_contract},
 
   # `Mix.Task`'s `run/1` returns whatever `Mix.shell().info/1` returned, so its
   # success typing is `:ok | String.t()`; `Mix.raise/1` makes `render/2` and
